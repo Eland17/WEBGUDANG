@@ -1,0 +1,11 @@
+body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; font-size: 14px; }
+header, footer { background: #007bff; color: white; padding: 1rem; text-align: center; }
+.container { padding: 2rem; text-align: center; }
+.button { padding: 1rem; background: #007bff; color: white; border-radius: 5px; margin: 0.5rem; text-decoration: none; display: inline-block; }
+table { margin: 1rem auto; width: 95%; border-collapse: collapse; background: white; }
+th, td { padding: 0.5rem; border: 1px solid #000; text-align: center; }
+td.nama-barang { text-align: left; padding-left: 8px; }
+td.angka-kanan { text-align: right; padding-right: 8px; }
+.filters input { margin: 0.3rem; padding: 0.5rem; font-size: 14px; }
+.pagination button { margin: 0.3rem; padding: 0.5rem 1rem; }
+.marquee-info { background: transparent; color: orange; font-weight: bold; padding: 0.5rem 1rem; font-size: 14px; }

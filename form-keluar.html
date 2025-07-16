@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barang Keluar</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #e9f0fb;
+      padding: 2rem;
+      margin: 0;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #004085;
+    }
+    form {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 2rem 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+    input[type="text"], input[type="number"], input[type="date"], input[list] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1.8px solid #a3bffa;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    input:focus {
+      border-color: #3b6dfc;
+      box-shadow: 0 0 6px rgba(59,109,252,0.3);
+      outline: none;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 0.55rem 1.5rem;
+      font-weight: 700;
+      font-size: 1rem;
+      border-radius: 7px;
+      color: white;
+      background: #3b6dfc;
+      margin-right: 1rem;
+    }
+    button:hover {
+      background: #2c51d9;
+    }
+    button.btn-back {
+      background: #6c757d;
+    }
+    button.btn-back:hover {
+      background: #565e64;
+    }
+    @media (max-width: 540px) {
+      button {
+        width: 100%;
+        margin: 0 0 1rem 0;
+      }
+      .btn-container {
+        display: flex;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>Barang Keluar</h2>
+  <form id="formKeluar" autocomplete="off">
+    <label for="kode_barang">Kode Barang</label>
+    <input list="listKodeBarang" id="kode_barang" name="kode_barang" required />
+    <datalist id="listKodeBarang"></datalist>
+
+    <label for="nama_barang">Nama Barang</label>
+    <input list="listNamaBarang" id="nama_barang" name="nama_barang" required />
+    <datalist id="listNamaBarang"></datalist>
+
+    <label for="kode_buyer">Kode Buyer</label>
+    <input type="text" id="kode_buyer" name="kode_buyer" required />
+
+    <label for="jumlah">Jumlah</label>
+    <input type="number" id="jumlah" name="jumlah" required min="1" />
+
+    <label for="satuan">Satuan</label>
+    <input type="text" id="satuan" name="satuan" required placeholder="Contoh: pcs, kg" />
+
+    <label for="keterangan">Keterangan</label>
+    <input type="text" id="keterangan" name="Keterangan" />
+
+    <label for="tanggal">Tanggal Keluar</label>
+    <input type="date" id="tanggal" name="tanggal" required />
+
+    <div class="btn-container">
+      <button type="submit">Simpan</button>
+      <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali</button>
+    </div>
+  </form>
+
+  <script>
+    const dataMasuk = JSON.parse(localStorage.getItem('dataMasuk')) || [];
+    const dataKeluar = JSON.parse(localStorage.getItem('dataKeluar')) || [];
+
+    const barangSet = new Map();
+    [...dataMasuk, ...dataKeluar].forEach(item => {
+      if (item.kode_barang && item.nama_barang) {
+        barangSet.set(item.kode_barang, item.nama_barang);
+      }
+    });
+
+    const datalistKode = document.getElementById('listKodeBarang');
+    const datalistNama = document.getElementById('listNamaBarang');
+
+    barangSet.forEach((nama, kode) => {
+      const optionKode = document.createElement('option');
+      optionKode.value = kode;
+      datalistKode.appendChild(optionKode);
+
+      const optionNama = document.createElement('option');
+      optionNama.value = nama;
+      datalistNama.appendChild(optionNama);
+    });
+
+    const inputKode = document.getElementById('kode_barang');
+    const inputNama = document.getElementById('nama_barang');
+
+    inputKode.addEventListener('change', () => {
+      const nama = barangSet.get(inputKode.value);
+      if (nama) inputNama.value = nama;
+    });
+
+    inputNama.addEventListener('change', () => {
+      const found = [...barangSet.entries()].find(([k, n]) => n === inputNama.value);
+      if (found) inputKode.value = found[0];
+    });
+
+    const form = document.getElementById('formKeluar');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      const kode = data.kode_barang;
+      const jumlahKeluar = parseFloat(data.jumlah);
+
+      // Hitung total masuk dan keluar untuk barang ini
+      const totalMasuk = dataMasuk
+        .filter(item => item.kode_barang === kode)
+        .reduce((sum, item) => sum + parseFloat(item.jumlah), 0);
+
+      const totalKeluar = dataKeluar
+        .filter(item => item.kode_barang === kode)
+        .reduce((sum, item) => sum + parseFloat(item.jumlah), 0);
+
+      const stokTersedia = totalMasuk - totalKeluar;
+
+      if (jumlahKeluar > stokTersedia) {
+        alert(`Stok tidak cukup!\nStok tersedia: ${stokTersedia}\nJumlah keluar: ${jumlahKeluar}`);
+        return;
+      }
+
+      // Simpan ke localStorage
+      const simpanan = JSON.parse(localStorage.getItem('dataKeluar')) || [];
+      simpanan.push(data);
+      localStorage.setItem('dataKeluar', JSON.stringify(simpanan));
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

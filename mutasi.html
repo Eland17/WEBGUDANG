@@ -1,0 +1,522 @@
+<!-- Mulai dari DOCTYPE hingga seluruh script -->
+<!-- Fitur Edit sudah ditambahkan di bagian tombol dan skrip JavaScript -->
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mutasi Barang - Inventory Gudang</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      font-size: 12px;
+    }
+
+    header {
+      background: #007bff;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .container {
+      padding: 1rem;
+    }
+
+    a.button, button.button {
+      display: inline-block;
+      background: #007bff;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      text-decoration: none;
+      margin: 0.5rem 0.25rem;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+    }
+
+    button.green { background: #28a745; }
+    button.red { background: #dc3545; }
+
+    .filter-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem 0;
+      justify-content: center;
+    }
+
+    .filter-container label {
+      display: flex;
+      flex-direction: column;
+      font-weight: bold;
+      font-size: 11px;
+      min-width: 140px;
+    }
+
+    .filter-container input,
+    .filter-container select {
+      padding: 0.3rem 0.4rem;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-top: 0.25rem;
+    }
+
+    .filter-container button {
+      align-self: flex-end;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+
+    table {
+      margin: 1rem auto;
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      font-size: 11px;
+    }
+
+    th, td {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #ccc;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    td.nama-barang {
+      text-align: left;
+      padding-left: 6px;
+    }
+
+    td.jumlah {
+      text-align: right;
+      padding-right: 6px;
+    }
+
+    th.jumlah {
+      text-align: right;
+      padding-right: 6px;
+    }
+
+    th {
+      background: #007bff;
+      color: white;
+      cursor: default;
+      user-select: none;
+    }
+
+    th.sortable {
+      cursor: pointer;
+    }
+
+    th.sortable.asc::after {
+      content: " ▲";
+      font-size: 10px;
+    }
+
+    th.sortable.desc::after {
+      content: " ▼";
+      font-size: 10px;
+    }
+
+    .pagination {
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .pagination button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      margin: 0 0.2rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .pagination button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    button.delete-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    button.edit-btn {
+      background: #ffc107;
+      color: black;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin-bottom: 1rem;
+        background: white;
+        border-radius: 8px;
+        padding: 0.5rem;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      }
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem;
+        border: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mutasi Barang</h1>
+  </header>
+  <div class="container">
+    <a href="index.html" class="button">&larr; Kembali ke Dashboard</a>
+    <div style="margin: 1rem 0;">
+      <button onclick="exportToExcel()" class="button green">Export ke Excel</button>
+      <button onclick="exportToPDF()" class="button red">Export ke PDF</button>
+    </div>
+
+    <div class="filter-container">
+      <label>Tanggal Awal:<input type="date" id="filterTanggalAwal" /></label>
+      <label>Tanggal Akhir:<input type="date" id="filterTanggalAkhir" /></label>
+      <label>Type:
+        <select id="filterType">
+          <option value="">Semua</option>
+          <option value="Masuk">Masuk</option>
+          <option value="Keluar">Keluar</option>
+        </select>
+      </label>
+      <label>Kode Buyer:<input type="text" id="filterBuyer" placeholder="Contoh: BYR001" /></label>
+      <label>Nama Barang:<input type="text" id="filterNamaBarang" placeholder="Contoh: Kemeja" /></label>
+      <button onclick="applyFilter()" class="button">Terapkan Filter</button>
+    </div>
+
+    <table id="tabelMutasi">
+      <thead>
+        <tr>
+          <th id="headerTanggal" class="sortable desc">Tanggal</th>
+          <th>Type</th>
+          <th>Kode Barang</th>
+          <th>Kode Buyer</th>
+          <th>Nama Barang</th>
+          <th>Satuan</th>
+          <th class="jumlah">Jumlah</th>
+          <th>Keterangan</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="pagination">
+      <button id="prevPageMutasi" disabled>Previous</button>
+      <span id="pageInfoMutasi"></span>
+      <button id="nextPageMutasi" disabled>Next</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    let dataMasuk = JSON.parse(localStorage.getItem('dataMasuk')) || [];
+    let dataKeluar = JSON.parse(localStorage.getItem('dataKeluar')) || [];
+
+    dataMasuk = dataMasuk.map(item => ({...item, satuan: item.satuan || '-'}));
+    dataKeluar = dataKeluar.map(item => ({...item, satuan: item.satuan || '-'}));
+
+    const mutasiGabungan = [
+      ...dataMasuk.map((item, index) => ({...item, type: 'Masuk', index, source: 'masuk'})),
+      ...dataKeluar.map((item, index) => ({...item, type: 'Keluar', index, source: 'keluar'}))
+    ];
+
+    let sortAsc = false;
+    let filteredData = [...mutasiGabungan];
+    sortMutasiByTanggal();
+
+    const rowsPerPage = 20;
+    let currentPageMutasi = 1;
+    let totalPagesMutasi = Math.ceil(filteredData.length / rowsPerPage);
+
+    const tbodyMutasi = document.querySelector('#tabelMutasi tbody');
+    const prevBtn = document.getElementById('prevPageMutasi');
+    const nextBtn = document.getElementById('nextPageMutasi');
+    const pageInfo = document.getElementById('pageInfoMutasi');
+    const headerTanggal = document.getElementById('headerTanggal');
+
+    function sortMutasiByTanggal() {
+      filteredData.sort((a, b) => {
+        const dateA = new Date(a.tanggal);
+        const dateB = new Date(b.tanggal);
+        return sortAsc ? dateA - dateB : dateB - dateA;
+      });
+    }
+
+    function updatePagination() {
+      totalPagesMutasi = Math.ceil(filteredData.length / rowsPerPage);
+      pageInfo.textContent = `Halaman ${currentPageMutasi} dari ${totalPagesMutasi || 1}`;
+      prevBtn.disabled = currentPageMutasi === 1;
+      nextBtn.disabled = currentPageMutasi === totalPagesMutasi || totalPagesMutasi === 0;
+    }
+
+    function renderTablePage(page) {
+      tbodyMutasi.innerHTML = '';
+      const start = (page - 1) * rowsPerPage;
+      const pageItems = filteredData.slice(start, start + rowsPerPage);
+
+      pageItems.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td data-label="Tanggal">${item.tanggal}</td>
+          <td data-label="Type">${item.type}</td>
+          <td data-label="Kode Barang">${item.kode_barang}</td>
+          <td data-label="Kode Buyer">${item.kode_buyer}</td>
+          <td class="nama-barang" data-label="Nama Barang">${item.nama_barang}</td>
+          <td data-label="Satuan">${item.satuan}</td>
+          <td class="jumlah" data-label="Jumlah">${item.jumlah}</td>
+          <td data-label="Keterangan">${item.Keterangan || ''}</td>
+          <td data-label="Aksi">
+            <button class="delete-btn" data-type="${item.source}" data-index="${item.index}">Delete</button>
+            <button class="edit-btn" data-type="${item.source}" data-index="${item.index}">Edit</button>
+          </td>
+        `;
+        tbodyMutasi.appendChild(row);
+      });
+
+      // DELETE
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const type = this.getAttribute('data-type');
+          const idx = parseInt(this.getAttribute('data-index'), 10);
+          if (type === 'masuk') {
+            dataMasuk.splice(idx, 1);
+            localStorage.setItem('dataMasuk', JSON.stringify(dataMasuk));
+          } else {
+            dataKeluar.splice(idx, 1);
+            localStorage.setItem('dataKeluar', JSON.stringify(dataKeluar));
+          }
+          location.reload();
+        });
+      });
+
+// EDIT
+document.querySelectorAll('.edit-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const type = this.getAttribute('data-type');
+    const idx = parseInt(this.getAttribute('data-index'), 10);
+
+    const dataArr = type === 'masuk' ? dataMasuk : dataKeluar;
+    const item = dataArr[idx];
+
+    const tanggalBaru = prompt("Edit Tanggal (YYYY-MM-DD):", item.tanggal);
+    if (tanggalBaru === null) return;
+
+    const kodeBarangBaru = prompt("Edit Kode Barang:", item.kode_barang);
+    if (kodeBarangBaru === null) return;
+
+    const kodeBuyerBaru = prompt("Edit Kode Buyer:", item.kode_buyer);
+    if (kodeBuyerBaru === null) return;
+
+    const namaBarangBaru = prompt("Edit Nama Barang:", item.nama_barang);
+    if (namaBarangBaru === null) return;
+
+    const satuanBaru = prompt("Edit Satuan:", item.satuan || '-');
+    if (satuanBaru === null) return;
+
+    const jumlahBaru = prompt("Edit Jumlah:", item.jumlah);
+    if (jumlahBaru === null) return;
+
+    const ketBaru = prompt("Edit Keterangan:", item.Keterangan || '');
+    if (ketBaru === null) return;
+
+    // Simpan perubahan
+    item.tanggal = tanggalBaru;
+    item.kode_barang = kodeBarangBaru;
+    item.kode_buyer = kodeBuyerBaru;
+    item.nama_barang = namaBarangBaru;
+    item.satuan = satuanBaru;
+    item.jumlah = jumlahBaru;
+    item.Keterangan = ketBaru;
+
+    // Simpan kembali
+    if (type === 'masuk') {
+      localStorage.setItem('dataMasuk', JSON.stringify(dataMasuk));
+    } else {
+      localStorage.setItem('dataKeluar', JSON.stringify(dataKeluar));
+    }
+
+    location.reload();
+  });
+});
+
+
+      updatePagination();
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentPageMutasi > 1) {
+        currentPageMutasi--;
+        renderTablePage(currentPageMutasi);
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentPageMutasi < totalPagesMutasi) {
+        currentPageMutasi++;
+        renderTablePage(currentPageMutasi);
+      }
+    });
+
+    function applyFilter() {
+      const awal = document.getElementById('filterTanggalAwal').value;
+      const akhir = document.getElementById('filterTanggalAkhir').value;
+      const tipe = document.getElementById('filterType').value;
+      const buyer = document.getElementById('filterBuyer').value.toLowerCase();
+      const nama = document.getElementById('filterNamaBarang').value.toLowerCase();
+
+      filteredData = mutasiGabungan.filter(item => {
+        const tgl = new Date(item.tanggal);
+        return (!awal || tgl >= new Date(awal)) &&
+               (!akhir || tgl <= new Date(akhir)) &&
+               (!tipe || item.type === tipe) &&
+               (!buyer || (item.kode_buyer || '').toLowerCase().includes(buyer)) &&
+               (!nama || (item.nama_barang || '').toLowerCase().includes(nama));
+      });
+
+      sortMutasiByTanggal();
+      currentPageMutasi = 1;
+      renderTablePage(currentPageMutasi);
+    }
+
+    headerTanggal.addEventListener('click', () => {
+      sortAsc = !sortAsc;
+      headerTanggal.classList.toggle('asc', sortAsc);
+      headerTanggal.classList.toggle('desc', !sortAsc);
+      sortMutasiByTanggal();
+      renderTablePage(currentPageMutasi);
+    });
+
+    function exportToExcel() {
+      const sheetData = filteredData.map(item => ({
+        Tanggal: item.tanggal,
+        Type: item.type,
+        "Kode Barang": item.kode_barang,
+        "Kode Buyer": item.kode_buyer,
+        "Nama Barang": item.nama_barang,
+        Satuan: item.satuan,
+        Jumlah: item.jumlah,
+        Keterangan: item.Keterangan || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(sheetData, {
+        header: ['Tanggal','Type','Kode Barang','Kode Buyer','Nama Barang','Satuan','Jumlah','Keterangan']
+      });
+
+      ws['!cols'] = [15,10,15,15,25,10,10,25].map(w => ({wch: w}));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Mutasi Barang');
+      XLSX.writeFile(wb, 'mutasi_barang.xlsx');
+    }
+
+    async function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({orientation: 'landscape', unit: 'pt', format: 'a4'});
+
+      const columns = [
+        { header: 'Tanggal', dataKey: 'Tanggal' },
+        { header: 'Type', dataKey: 'Type' },
+        { header: 'Kode Barang', dataKey: 'KodeBarang' },
+        { header: 'Kode Buyer', dataKey: 'KodeBuyer' },
+        { header: 'Nama Barang', dataKey: 'NamaBarang' },
+        { header: 'Satuan', dataKey: 'Satuan' },
+        { header: 'Jumlah', dataKey: 'Jumlah' },
+        { header: 'Keterangan', dataKey: 'Keterangan' }
+      ];
+
+      const rows = filteredData.map(item => ({
+        Tanggal: item.tanggal,
+        Type: item.type,
+        KodeBarang: item.kode_barang,
+        KodeBuyer: item.kode_buyer,
+        NamaBarang: item.nama_barang,
+        Satuan: item.satuan,
+        Jumlah: item.jumlah,
+        Keterangan: item.Keterangan || ''
+      }));
+
+      doc.setFontSize(14);
+      doc.text('Mutasi Barang', 40, 30);
+
+      doc.autoTable({
+        startY: 50,
+        head: [columns.map(c => c.header)],
+        body: rows.map(r => columns.map(c => r[c.dataKey])),
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+          valign: 'middle',
+          halign: 'center',
+          lineColor: [0,0,0],
+          lineWidth: 0.2
+        },
+        headStyles: {
+          fillColor: [0,123,255],
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        bodyStyles: {
+          fillColor: 255,
+          textColor: 0
+        },
+        theme: 'grid',
+        didDrawPage: (data) => {
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.text(`Page ${data.pageNumber} of ${pageCount}`, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 10);
+        }
+      });
+
+      doc.save('mutasi_barang.pdf');
+    }
+
+    renderTablePage(currentPageMutasi);
+  </script>
+</body>
+</html>
