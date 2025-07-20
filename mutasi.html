@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mutasi Barang - Inventory Gudang</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; font-size: 12px; background: #f4f4f4; }
+    header { background: #007bff; color: white; padding: 1rem; text-align: center; }
+    .layout { display: flex; }
+    .sidebar {
+      width: 200px;
+      background: #343a40;
+      color: white;
+      padding: 1rem;
+      height: calc(100vh - 70px);
+      box-sizing: border-box;
+    }
+    .sidebar h2 {
+      font-size: 16px;
+      margin-top: 0;
+    }
+    .sidebar a, .sidebar button {
+      display: block;
+      margin: 10px 0;
+      background: #495057;
+      color: white;
+      padding: 8px 12px;
+      text-decoration: none;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      font-size: 12px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    .sidebar button:hover, .sidebar a:hover {
+      background: #6c757d;
+    }
+    .content {
+      flex-grow: 1;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    /* Filter container di atas tabel */
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-row label {
+      font-size: 11px;
+      color: #333;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+    .filter-row input, .filter-row select {
+      padding: 4px 6px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      min-width: 120px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      font-size: 11px;
+      min-width: 900px;
+    }
+    table thead th {
+      background-color: #007bff;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #ccc;
+      text-align: center;
+      white-space: nowrap;
+    }
+    td.nama-barang { text-align: left; padding-left: 6px; }
+    td.jumlah { text-align: right; padding-right: 6px; }
+    button.delete-btn, button.edit-btn {
+      padding: 0.3rem 0.6rem;
+      font-size: 10px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      margin: 0 2px;
+      transition: background-color 0.3s ease;
+    }
+    button.delete-btn { background: #dc3545; color: white; }
+    button.delete-btn:hover { background: #b02a37; }
+    button.edit-btn { background: #ffc107; color: black; }
+    button.edit-btn:hover { background: #e0a800; }
+    .pagination {
+      text-align: center;
+      margin: 1rem 0;
+    }
+    .pagination button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      margin: 0 0.2rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background-color 0.3s ease;
+    }
+    .pagination button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    #tabelMutasi tbody tr:hover {
+      background-color: #d0e7ff !important;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mutasi Barang</h1>
+  </header>
+  <div class="layout">
+    <div class="sidebar">
+      <h2>Menu</h2>
+      <a href="index.html">&larr; Dashboard</a>
+      <button onclick="exportToPDF()">Export ke PDF</button>
+      <button onclick="exportToExcel()">Export ke Excel</button>
+    </div>
+    <div class="content">
+
+      <!-- Filter terpisah di atas tabel -->
+      <div class="filter-row">
+        <div>
+          <label for="filterTanggal">Tanggal:</label><br />
+          <input type="text" id="filterTanggal" placeholder="Filter Tanggal" />
+        </div>
+        <div>
+          <label for="filterType">Type:</label><br />
+          <select id="filterType">
+            <option value="">Semua</option>
+            <option value="Masuk">Masuk</option>
+            <option value="Keluar">Keluar</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterKodeBuyer">Kode Buyer:</label><br />
+          <input type="text" id="filterKodeBuyer" placeholder="Filter Kode Buyer" />
+        </div>
+        <div>
+          <label for="filterNamaBarang">Nama Barang:</label><br />
+          <input type="text" id="filterNamaBarang" placeholder="Filter Nama Barang" />
+        </div>
+      </div>
+
+      <table id="tabelMutasi">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Type</th>
+            <th>Kode Barang</th>
+            <th>Kode Buyer</th>
+            <th>Nama Barang</th>
+            <th>Satuan</th>
+            <th class="jumlah">Jumlah</th>
+            <th>Keterangan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="pagination">
+        <button id="prevPageMutasi" disabled>Previous</button>
+        <span id="pageInfoMutasi"></span>
+        <button id="nextPageMutasi" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <!-- jsPDF + autotable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+      authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+      databaseURL: "https://inventory-gudang-16dfe-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "inventory-gudang-16dfe",
+      storageBucket: "inventory-gudang-16dfe.appspot.com",
+      messagingSenderId: "663364522026",
+      appId: "1:663364522026:web:f48fb1ba0331695de83353",
+      measurementId: "G-NM1JKR9W8V"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let dataMasuk = [];
+    let dataKeluar = [];
+    let mutasiGabungan = [];
+
+    const rowsPerPage = 10;
+    let currentPageMutasi = 1;
+    let filteredData = [];
+
+    const tbodyMutasi = document.querySelector('#tabelMutasi tbody');
+    const prevBtn = document.getElementById('prevPageMutasi');
+    const nextBtn = document.getElementById('nextPageMutasi');
+    const pageInfo = document.getElementById('pageInfoMutasi');
+
+    // Filter inputs
+    const filterTanggal = document.getElementById('filterTanggal');
+    const filterType = document.getElementById('filterType');
+    const filterKodeBuyer = document.getElementById('filterKodeBuyer');
+    const filterNamaBarang = document.getElementById('filterNamaBarang');
+
+    function formatAngka(num) {
+      if (!num || isNaN(num)) return "0.00";
+      return Number(num).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, '.');
+    }
+
+    async function loadData() {
+      try {
+        const [snapMasuk, snapKeluar] = await Promise.all([
+          db.collection('barangMasuk').get(),
+          db.collection('barangKeluar').get()
+        ]);
+        dataMasuk = snapMasuk.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        dataKeluar = snapKeluar.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+        mutasiGabungan = [
+          ...dataMasuk.map((item, idx) => ({...item, type:'Masuk', index: idx, source: 'masuk'})),
+          ...dataKeluar.map((item, idx) => ({...item, type:'Keluar', index: idx, source: 'keluar'}))
+        ];
+
+        filteredData = [...mutasiGabungan];
+        currentPageMutasi = 1;
+        resetFilters();
+        renderTablePage(currentPageMutasi);
+      } catch (error) {
+        alert("Gagal mengambil data dari Firestore: " + error);
+      }
+    }
+
+    function resetFilters() {
+      filterTanggal.value = '';
+      filterType.value = '';
+      filterKodeBuyer.value = '';
+      filterNamaBarang.value = '';
+    }
+
+    function filterData() {
+      filteredData = mutasiGabungan.filter(item => {
+        const tanggalMatch = filterTanggal.value.trim() === '' ||
+          (item.tanggal && item.tanggal.toLowerCase().includes(filterTanggal.value.trim().toLowerCase()));
+        const typeMatch = filterType.value === '' || item.type === filterType.value;
+        const kodeBuyerMatch = filterKodeBuyer.value.trim() === '' ||
+          (item.kode_buyer && item.kode_buyer.toLowerCase().includes(filterKodeBuyer.value.trim().toLowerCase()));
+        const namaBarangMatch = filterNamaBarang.value.trim() === '' ||
+          (item.nama_barang && item.nama_barang.toLowerCase().includes(filterNamaBarang.value.trim().toLowerCase()));
+        return tanggalMatch && typeMatch && kodeBuyerMatch && namaBarangMatch;
+      });
+      currentPageMutasi = 1;
+      renderTablePage(currentPageMutasi);
+    }
+
+    function updatePagination() {
+      const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+      pageInfo.textContent = `Halaman ${currentPageMutasi} dari ${totalPages || 1}`;
+      prevBtn.disabled = currentPageMutasi === 1;
+      nextBtn.disabled = currentPageMutasi === totalPages || totalPages === 0;
+    }
+
+    function renderTablePage(page) {
+      tbodyMutasi.innerHTML = '';
+      const start = (page - 1) * rowsPerPage;
+      const pageItems = filteredData.slice(start, start + rowsPerPage);
+
+      pageItems.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.tanggal || ''}</td>
+          <td>${item.type}</td>
+          <td>${item.kode_barang || ''}</td>
+          <td>${item.kode_buyer || ''}</td>
+          <td class="nama-barang">${item.nama_barang || ''}</td>
+          <td>${item.satuan || ''}</td>
+          <td class="jumlah">${formatAngka(item.jumlah)}</td>
+          <td>${item.keterangan || ''}</td>
+          <td>
+            <button class="delete-btn" data-type="${item.source}" data-index="${item.index}">Delete</button>
+            <button class="edit-btn" data-type="${item.source}" data-index="${item.index}">Edit</button>
+          </td>
+        `;
+        tbodyMutasi.appendChild(tr);
+      });
+
+      // Event Delete
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const type = btn.dataset.type;
+          const idx = parseInt(btn.dataset.index);
+          const docId = type === 'masuk' ? dataMasuk[idx].id : dataKeluar[idx].id;
+          try {
+            await db.collection(type === 'masuk' ? 'barangMasuk' : 'barangKeluar').doc(docId).delete();
+            if (type === 'masuk') dataMasuk.splice(idx, 1);
+            else dataKeluar.splice(idx, 1);
+            await loadData();
+          } catch (err) {
+            alert('Gagal menghapus data: ' + err);
+          }
+        };
+      });
+
+      // Event Edit
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const type = btn.dataset.type;
+          const idx = parseInt(btn.dataset.index);
+          const item = type === 'masuk' ? dataMasuk[idx] : dataKeluar[idx];
+          const newJumlahStr = prompt("Edit Jumlah:", item.jumlah);
+          if (newJumlahStr !== null) {
+            const newJumlah = parseFloat(newJumlahStr);
+            if (isNaN(newJumlah)) {
+              alert('Input jumlah harus angka!');
+              return;
+            }
+            try {
+              await db.collection(type === 'masuk' ? 'barangMasuk' : 'barangKeluar')
+                .doc(item.id).update({ jumlah: newJumlah });
+              item.jumlah = newJumlah;
+              renderTablePage(currentPageMutasi);
+            } catch(err) {
+              alert('Gagal update data: ' + err);
+            }
+          }
+        };
+      });
+
+      updatePagination();
+    }
+
+    [filterTanggal, filterType, filterKodeBuyer, filterNamaBarang].forEach(el => {
+      el.addEventListener('input', filterData);
+      el.addEventListener('change', filterData);
+    });
+
+    function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor("#007bff");
+      doc.text("Laporan Mutasi Barang", 40, 40);
+
+      const headers = [["Tanggal", "Type", "Kode Barang", "Kode Buyer", "Nama Barang", "Satuan", "Jumlah", "Keterangan"]];
+      const data = filteredData.map(row => [
+        row.tanggal || '',
+        row.type || '',
+        row.kode_barang || '',
+        row.kode_buyer || '',
+        row.nama_barang || '',
+        row.satuan || '',
+        formatAngka(row.jumlah),
+        row.keterangan || ''
+      ]);
+
+      doc.autoTable({
+        startY: 60,
+        head: headers,
+        body: data,
+        styles: {
+          fontSize: 7,
+          cellPadding: 3,
+          valign: 'middle',
+          overflow: 'hidden',
+          lineColor: [0, 0, 0],
+          lineWidth: 0.5,
+          font: 'helvetica',
+          textColor: 0,
+          fillColor: [255, 255, 255],
+        },
+        headStyles: {
+          fillColor: [0, 123, 255],
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        columnStyles: {
+          0: { halign: 'center' },
+          1: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'center' },
+          4: { halign: 'left' },
+          5: { halign: 'center' },
+          6: { halign: 'right' },
+          7: { halign: 'center' },
+        },
+        margin: { left: 40, right: 40 },
+        tableLineWidth: 0.5,
+        tableLineColor: [0, 0, 0],
+
+        didDrawPage: function (data) {
+          const footerText = "Copyright © 2024 Eland";
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          const textWidth = doc.getTextWidth(footerText);
+          const xPos = pageWidth - textWidth - 40;
+          const yPos = pageHeight - 10;
+          doc.text(footerText, xPos, yPos);
+        }
+      });
+
+      doc.save("mutasi_barang.pdf");
+    }
+
+    function exportToExcel() {
+      const ws_data = [
+        ["Tanggal", "Type", "Kode Barang", "Kode Buyer", "Nama Barang", "Satuan", "Jumlah", "Keterangan"],
+        ...filteredData.map(row => [
+          row.tanggal, row.type, row.kode_barang, row.kode_buyer, row.nama_barang,
+          row.satuan, row.jumlah, row.keterangan
+        ])
+      ];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "MutasiBarang");
+      XLSX.writeFile(wb, "mutasi_barang.xlsx");
+    }
+
+    prevBtn.onclick = () => {
+      if (currentPageMutasi > 1) {
+        currentPageMutasi--;
+        renderTablePage(currentPageMutasi);
+      }
+    };
+
+    nextBtn.onclick = () => {
+      const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+      if (currentPageMutasi < totalPages) {
+        currentPageMutasi++;
+        renderTablePage(currentPageMutasi);
+      }
+    };
+
+    window.onload = () => {
+      loadData();
+    };
+  </script>
+</body>
+</html>
