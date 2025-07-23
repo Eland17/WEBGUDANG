@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login Admin</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .login-container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .login-container h2 {
+      margin-bottom: 1.5rem;
+      color: #007bff;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 0.6rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .error-message {
+      color: red;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Login Admin</h2>
+    <input type="password" id="adminPassword" placeholder="Masukkan password">
+    <button onclick="loginSebagaiAdmin()">Login</button>
+    <div class="error-message" id="loginError"></div>
+  </div>
+
+  <script>
+    function loginSebagaiAdmin() {
+      const password = document.getElementById('adminPassword').value;
+      if (password === 'admin1212') {
+        localStorage.setItem('isAdmin', 'true');
+        window.location.href = 'dashboard.html';
+      } else {
+        document.getElementById('loginError').textContent = 'Password salah!';
+      }
+    }
+  </script>
+</body>
+</html>

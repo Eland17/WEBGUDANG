@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard Inventory Gudang</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; font-size: 14px; min-height: 100vh; }
+    header { background: #007bff; color: white; padding: 1rem; text-align: center; }
+    .container { padding: 2rem; text-align: center; }
+    .button { display: inline-block; padding: 1rem 1.5rem; margin: 0.5rem; background: #007bff; color: white; text-decoration: none; border-radius: 5px; font-size: 14px; cursor: pointer; border: none; }
+    table { margin: 1.5rem auto 2rem; width: 95%; border-collapse: collapse; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    th, td { padding: 0.5rem; border: 1px solid #ccc; text-align: center; white-space: nowrap; }
+    td.nama-barang { text-align: left; padding-left: 8px; }
+    th { background: #007bff; color: white; }
+    .angka-kanan { text-align: right; padding-right: 8px; }
+    th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7) { width: 5%; }
+    .pagination { margin: 1rem auto 2rem; text-align: center; }
+    .pagination button { background: #007bff; color: white; border: none; padding: 0.5rem 1rem; margin: 0 0.2rem; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .pagination button:disabled { background: #aaa; cursor: not-allowed; }
+    .filters { margin-bottom: 1rem; text-align: left; max-width: 95%; margin-left: auto; margin-right: auto; }
+    .filters input { margin-right: 10px; padding: 6px 8px; font-size: 14px; width: 160px; border: 1px solid #ccc; border-radius: 4px; }
+    .marquee-info { background: transparent; color: orange; font-weight: bold; padding: 0.5rem 1rem; font-size: 14px; }
+    footer { background: #007bff; color: white; text-align: center; padding: 0.5rem 1rem; font-size: 14px; font-weight: 500; }
+    .stok-0 { background-color: #ff8a80; color: #900; font-weight: bold; }
+    .stok-rendah { background-color: #ffcc80; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <script>
+    if (localStorage.getItem('isAdmin') !== 'true') {
+      window.location.href = 'login.html';
+    }
+  </script>
+
+  <header>
+    <h1>Inventory Gudang</h1>
+  </header>
+
+  <div class="container">
+    <a href="form-masuk.html" class="button">Barang Masuk</a>
+    <a href="form-keluar.html" class="button">Barang Keluar</a>
+    <a href="mutasi.html" class="button">Lihat Mutasi Barang</a>
+    <button id="exportPdf" class="button">Export PDF</button>
+    <button id="exportExcel" class="button">Export Excel</button>
+
+    <h2>Stok Barang</h2>
+
+    <div class="filters">
+      <input type="text" id="filterKodeBarang" placeholder="Filter Kode Barang" />
+      <input type="text" id="filterKodeBuyer" placeholder="Filter Kode Buyer" />
+      <input type="text" id="filterNamaBarang" placeholder="Filter Nama Barang" />
+    </div>
+
+    <table id="tabelInventory">
+      <thead>
+        <tr>
+          <th>Kode Barang</th>
+          <th>Kode Buyer</th>
+          <th>Nama Barang</th>
+          <th>Satuan</th>
+          <th class="angka-kanan">Jumlah Masuk</th>
+          <th class="angka-kanan">Jumlah Keluar</th>
+          <th class="angka-kanan">Stok Tersisa</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="pagination" id="paginationInventory">
+      <button id="prevPageInventory" disabled>Previous</button>
+      <span id="pageInfoInventory"></span>
+      <button id="nextPageInventory" disabled>Next</button>
+    </div>
+  </div>
+
+  <marquee class="marquee-info" behavior="scroll" direction="left" scrollamount="4" id="marqueeInfo"></marquee>
+
+  <footer>Created by Elan</footer>
+
+  <script>
+    const dataMasuk = JSON.parse(localStorage.getItem('dataMasuk')) || [];
+    const dataKeluar = JSON.parse(localStorage.getItem('dataKeluar')) || [];
+
+    const stokMap = {};
+    dataMasuk.forEach(item => {
+      const key = item.kode_barang;
+      if (!stokMap[key]) stokMap[key] = { kode_barang: item.kode_barang, kode_buyer: item.kode_buyer || '-', nama_barang: item.nama_barang, satuan: item.satuan || '-', masuk: 0, keluar: 0 };
+      stokMap[key].masuk += parseInt(item.jumlah);
+    });
+    dataKeluar.forEach(item => {
+      const key = item.kode_barang;
+      if (!stokMap[key]) stokMap[key] = { kode_barang: item.kode_barang, kode_buyer: item.kode_buyer || '-', nama_barang: item.nama_barang, satuan: item.satuan || '-', masuk: 0, keluar: 0 };
+      stokMap[key].keluar += parseInt(item.jumlah);
+    });
+
+    let stokArray = Object.values(stokMap);
+    const rowsPerPage = 20;
+    let currentPageInventory = 1;
+
+    const tbodyInventory = document.querySelector('#tabelInventory tbody');
+    const prevBtnInventory = document.getElementById('prevPageInventory');
+    const nextBtnInventory = document.getElementById('nextPageInventory');
+    const pageInfoInventory = document.getElementById('pageInfoInventory');
+
+    function renderTablePageInventory(page) {
+      tbodyInventory.innerHTML = '';
+      stokArray.sort((a, b) => a.kode_barang.localeCompare(b.kode_barang));
+      const start = (page - 1) * rowsPerPage;
+      const end = start + rowsPerPage;
+      const pageItems = stokArray.slice(start, end);
+
+      pageItems.forEach(data => {
+        const sisa = data.masuk - data.keluar;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${data.kode_barang}</td>
+          <td>${data.kode_buyer}</td>
+          <td class="nama-barang">${data.nama_barang}</td>
+          <td>${data.satuan}</td>
+          <td class="angka-kanan">${data.masuk.toLocaleString('id-ID')}</td>
+          <td class="angka-kanan">${data.keluar.toLocaleString('id-ID')}</td>
+          <td class="angka-kanan ${sisa === 0 ? 'stok-0' : sisa < 6 ? 'stok-rendah' : ''}">${sisa.toLocaleString('id-ID')}</td>`;
+        tbodyInventory.appendChild(row);
+      });
+
+      const totalPages = Math.ceil(stokArray.length / rowsPerPage);
+      pageInfoInventory.textContent = `Halaman ${page} dari ${totalPages}`;
+      prevBtnInventory.disabled = page === 1;
+      nextBtnInventory.disabled = page === totalPages;
+    }
+
+    function filterStokBarang() {
+      const kode = document.getElementById('filterKodeBarang').value.toLowerCase();
+      const buyer = document.getElementById('filterKodeBuyer').value.toLowerCase();
+      const nama = document.getElementById('filterNamaBarang').value.toLowerCase();
+      stokArray = Object.values(stokMap).filter(item =>
+        item.kode_barang.toLowerCase().includes(kode) &&
+        item.kode_buyer.toLowerCase().includes(buyer) &&
+        item.nama_barang.toLowerCase().includes(nama)
+      );
+      currentPageInventory = 1;
+      renderTablePageInventory(currentPageInventory);
+    }
+
+    document.getElementById('filterKodeBarang').addEventListener('input', filterStokBarang);
+    document.getElementById('filterKodeBuyer').addEventListener('input', filterStokBarang);
+    document.getElementById('filterNamaBarang').addEventListener('input', filterStokBarang);
+
+    prevBtnInventory.addEventListener('click', () => {
+      if (currentPageInventory > 1) {
+        currentPageInventory--;
+        renderTablePageInventory(currentPageInventory);
+      }
+    });
+
+    nextBtnInventory.addEventListener('click', () => {
+      const totalPages = Math.ceil(stokArray.length / rowsPerPage);
+      if (currentPageInventory < totalPages) {
+        currentPageInventory++;
+        renderTablePageInventory(currentPageInventory);
+      }
+    });
+
+    renderTablePageInventory(currentPageInventory);
+
+    document.getElementById("exportPdf").addEventListener("click", function () {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "landscape" });
+      const headers = [["Kode Barang", "Kode Buyer", "Nama Barang", "Satuan", "Jumlah Masuk", "Jumlah Keluar", "Stok Tersisa"]];
+      const data = stokArray.map(item => {
+        const sisa = item.masuk - item.keluar;
+        return [item.kode_barang, item.kode_buyer, item.nama_barang, item.satuan, item.masuk.toLocaleString('id-ID'), item.keluar.toLocaleString('id-ID'), sisa.toLocaleString('id-ID')];
+      });
+      doc.setFontSize(12);
+      doc.text("Laporan Stok Barang - Inventory Gudang", 280, 15, { align: "right" });
+      doc.autoTable({ head: headers, body: data, startY: 20, theme: "grid" });
+      doc.save("Laporan_Stok_Gudang.pdf");
+    });
+
+    document.getElementById("exportExcel").addEventListener("click", function () {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [["Kode Barang", "Kode Buyer", "Nama Barang", "Satuan", "Jumlah Masuk", "Jumlah Keluar", "Stok Tersisa"], ...stokArray.map(item => {
+        const sisa = item.masuk - item.keluar;
+        return [item.kode_barang, item.kode_buyer, item.nama_barang, item.satuan, item.masuk, item.keluar, sisa];
+      })];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+      XLSX.writeFile(wb, "Laporan_Stok_Gudang.xlsx");
+    });
+
+    const marquee = document.getElementById("marqueeInfo");
+    const now = new Date();
+    const batas = new Date();
+    batas.setDate(now.getDate() - 5);
+    const terbaru = dataMasuk.filter(item => {
+      if (!item.tanggal) return false;
+      const tglItem = new Date(item.tanggal);
+      return tglItem >= batas && tglItem <= now;
+    });
+    marquee.textContent = terbaru.map(item => {
+      const tgl = new Date(item.tanggal);
+      const tglFormat = `${tgl.getDate().toString().padStart(2, '0')}-${(tgl.getMonth() + 1).toString().padStart(2, '0')}-${tgl.getFullYear()}`;
+      return `${tglFormat}: ${item.nama_barang} (${item.kode_barang}) masuk sebanyak ${parseInt(item.jumlah).toLocaleString('id-ID')}`;
+    }).join(' | ') || 'Tidak ada barang masuk dalam 5 hari terakhir.';
+  </script>
+</body>
+</html>
