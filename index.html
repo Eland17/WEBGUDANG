@@ -10,16 +10,13 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <!-- jsPDF (untuk export PDF) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-
-<!-- SheetJS (untuk export Excel) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+  <!-- SheetJS (untuk export Excel) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
-    /* Reset margin & padding */
     * {
       box-sizing: border-box;
     }
@@ -40,31 +37,27 @@
       flex-grow: 1;
     }
 
-  /* Header */
     header {
-     background-color: #1e90ff;     /* Biru terang */
-     color: white;                  /* Warna teks */
-     text-align: center;            /* Rata tengah */
-     padding: 0;                    /* Reset padding, diganti pakai height + line-height */
-     height: 120px;                 /* ✅ Tinggi header */
-     line-height: 120px;            /* ✅ Agar teks di tengah secara vertikal */
-     flex-shrink: 0;                /* Tidak mengecil dalam layout flex */
-     box-shadow: 0 2px 4px rgba(0,0,0,0.1);  /* Bayangan lembut */
-     font-size: 32px;               /* Ukuran teks */
-     font-weight: bold;            /* Tebal */
-     user-select: none;            /* Mencegah teks disorot */
-   }
+      background-color: #1e90ff;
+      color: white;
+      text-align: center;
+      padding: 0;
+      height: 120px;
+      line-height: 120px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-size: 32px;
+      font-weight: bold;
+      user-select: none;
+    }
 
-
-    /* Main content area with sidebar and content */
     .main-content {
       display: flex;
       flex: 1;
       overflow: hidden;
-      min-height: 0; /* important to prevent flex overflow */
+      min-height: 0;
     }
 
-    /* Sidebar kiri */
     .sidebar {
       background-color: #333;
       width: 220px;
@@ -95,14 +88,14 @@
       background-color: #1e90ff;
     }
 
-    /* Konten utama sebelah kanan */
     .content {
       flex: 1;
       padding: 20px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      min-height: 0; /* penting agar scroll bekerja */
+      min-height: 0;
+      overflow-x: auto;
     }
 
     .filters {
@@ -123,15 +116,14 @@
 
     table {
       width: 100%;
+      min-width: 800px;
       border-collapse: collapse;
-      margin-bottom: 15px;
-      flex-shrink: 0;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
       background-color: white;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
 
     th, td {
-      border: 1px solid #ddd;
+      border: 1px solid rgba(0,0,0,0.3);
       padding: 8px;
       text-align: center;
     }
@@ -142,11 +134,6 @@
       user-select: none;
     }
 
-    table, th, td {
-      border: 1px solid rgba(0, 0, 0, 0.3);
-    }
-
-    /* Tabel baris genap warna beda */
     tr:nth-child(even) {
       background-color: #f9f9f9;
     }
@@ -155,21 +142,18 @@
       background-color: #d0e7ff;
     }
 
-    /* Kolom nama barang rata kiri */
     td.nama-barang {
       text-align: left;
       padding-left: 8px;
     }
 
-    /* Kolom angka rata kanan dengan monospace */
     td.angka-kanan {
       text-align: right;
-      padding-right: 8px;
       font-family: monospace;
-      font-size: 18px;
+      padding-right: 10px;
+      font-size: 16px;
     }
 
-    /* Kolom 5,6,7 rata kanan */
     th:nth-child(5),
     th:nth-child(6),
     th:nth-child(7),
@@ -179,7 +163,6 @@
       text-align: right;
     }
 
-    /* Pagination */
     .pagination {
       margin-top: auto;
       text-align: center;
@@ -202,7 +185,6 @@
       cursor: default;
     }
 
-    /* Marquee biasa */
     .marquee-info {
       background-color: #f2f2f2;
       padding: 8px 16px;
@@ -217,7 +199,6 @@
       flex-shrink: 0;
     }
 
-    /* Footer fixed di bawah */
     footer {
       background-color: #007bff;
       color: white;
@@ -227,6 +208,39 @@
       user-select: none;
     }
 
+    /* ✅ Tambahan Responsif untuk Mobile */
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .sidebar a,
+      .sidebar button {
+        flex: 1 1 40%;
+        margin: 5px;
+        text-align: center;
+      }
+
+      .filters {
+        flex-direction: column;
+      }
+
+      .filters input {
+        flex: 1 1 100%;
+      }
+
+      .marquee-info {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 
@@ -243,9 +257,8 @@
         <a href="mutasi.html">Mutasi Barang</a>
         <button id="exportPdf">Export PDF</button>
         <button id="exportExcel">Export Excel</button>
-	<a href="material-control.html">Material Control</a>
-	<button onclick="tampilkanHalamanCatatan()">Notes</button>
-
+        <a href="material-control.html">Material Control</a>
+        <button onclick="tampilkanHalamanCatatan()">Notes</button>
       </nav>
 
       <main class="content">
@@ -257,20 +270,23 @@
           <input type="date" id="filterTanggalSampai" />
         </div>
 
-        <table id="tabelInventory">
-          <thead>
-            <tr>
-              <th>Kode Barang</th>
-              <th>Kode Buyer</th>
-              <th>Nama Barang</th>
-              <th>Satuan</th>
-              <th>Jumlah Masuk</th>
-              <th>Jumlah Keluar</th>
-              <th>Stok Tersisa</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <!-- ✅ Bungkus tabel dengan div scroll -->
+        <div style="overflow-x: auto;">
+          <table id="tabelInventory">
+            <thead>
+              <tr>
+                <th>Kode Barang</th>
+                <th>Kode Buyer</th>
+                <th>Nama Barang</th>
+                <th>Satuan</th>
+                <th>Jumlah Masuk</th>
+                <th>Jumlah Keluar</th>
+                <th>Stok Tersisa</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
 
         <div class="pagination">
           <button id="prevPage">Sebelumnya</button>
@@ -288,7 +304,6 @@
       Copyright © 2024 Eland
     </footer>
   </div>
-
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
