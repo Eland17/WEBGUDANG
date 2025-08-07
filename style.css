@@ -1,0 +1,221 @@
+/* Global Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  height: 100%;
+}
+
+/* Body flex column agar footer selalu di bawah */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header fixed */
+header {
+  background: #007bff;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Sidebar fixed */
+.sidebar {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  width: 220px;
+  height: calc(100vh - 56px);
+  background-color: #2c3e50;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 20px 10px;
+  z-index: 1100;
+}
+
+.sidebar .menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar .menu a,
+.sidebar .menu button {
+  background-color: #34495e;
+  color: white;
+  text-align: left;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar .menu a:hover,
+.sidebar .menu button:hover {
+  background-color: #3d566e;
+}
+
+/* Main content container */
+main.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 220px;    /* space for sidebar */
+  margin-top: 56px;      /* space for header */
+  padding: 1rem;
+  background-color: #f8f9fa;
+  min-width: 900px;
+  height: calc(100vh - 56px); /* fill vertical space minus header */
+}
+
+/* Wrapper tabel agar tabel bisa scroll */
+.table-wrapper {
+  flex-grow: 1;          /* supaya tumbuh memenuhi ruang yang tersedia */
+  overflow-y: auto;      /* scroll vertikal jika tabel terlalu tinggi */
+  background: white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  border: 2px solid black;
+  border-radius: 4px;
+}
+
+/* Tabel */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  min-width: 900px;
+}
+
+th, td {
+  border: 2px solid black;
+  padding: 0.4rem 0.6rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+th {
+  background-color: #007bff;
+  color: white;
+  user-select: none;
+}
+
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tr:hover {
+  background-color: #d0e7ff;
+}
+
+td.nama-barang {
+  text-align: left;
+  padding-left: 8px;
+}
+
+td.angka-kanan {
+  text-align: right;
+  padding-right: 8px;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kolom angka rata kanan */
+th:nth-child(5), th:nth-child(6), th:nth-child(7),
+td:nth-child(5), td:nth-child(6), td:nth-child(7) {
+  text-align: right;
+}
+
+/* Highlight stok rendah */
+td.stok-merah {
+  background-color: #ff4d4d;
+  color: white;
+  font-weight: bold;
+}
+
+td.stok-orange {
+  background-color: #ffa500;
+  color: black;
+  font-weight: bold;
+}
+
+/* Pagination */
+.pagination {
+  text-align: center;
+  margin: 0.5rem 0;
+}
+
+.pagination button {
+  padding: 0.5rem 1rem;
+  margin: 0.3rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.pagination button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Marquee fixed di atas footer */
+#marqueeInfoFooter {
+  position: fixed;
+  bottom: 40px; /* tinggi footer */
+  left: 220px;  /* lebar sidebar */
+  width: calc(100% - 220px);
+  height: 32px;
+  background-color: #f2f2f2;
+  padding: 8px 16px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 1000;
+  line-height: 16px;
+  box-sizing: border-box;
+}
+
+/* Footer fixed */
+footer {
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  padding: 0 10px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
