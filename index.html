@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Inventory Gudang</title>
 
-  <!-- Firebase SDK (pakai firestore) -->
+  <!-- Firebase SDK (pakai firestore dan auth) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
   <!-- jsPDF (untuk export PDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -17,6 +18,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
+    /* ... semua style kamu tetap sama ... */
     * {
       box-sizing: border-box;
     }
@@ -259,9 +261,10 @@
         <button id="exportExcel">Export Excel</button>
         <a href="material-control.html">Material Control</a>
         <button onclick="tampilkanHalamanCatatan()">Notes</button>
+        <button id="btnLogout" style="background:#d9534f;">Logout</button>
       </nav>
 
-      <main class="content">
+      <main class="content" id="mainContent">
         <div class="filters">
           <input type="text" id="filterKodeBarang" placeholder="Kode Barang" />
           <input type="text" id="filterKodeBuyer" placeholder="Kode Buyer" />
@@ -304,6 +307,7 @@
       Copyright © 2024 Eland
     </footer>
   </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
@@ -313,118 +317,135 @@
       messagingSenderId: "663364522026",
       appId: "1:663364522026:web:f48fb1ba0331695de83353"
     };
+
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
-function tampilkanHalamanCatatan() {
-  const content = document.querySelector(".content");
-  content.innerHTML = `
-    <h2>📒 Notes</h2>
-    <div style="display:flex; gap:24px; flex-wrap: wrap;">
-      <div style="flex: 1 1 35%; background:white; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-        <textarea id="inputCatatan" placeholder="Tulis sesuatu di sini..." style="width:100%; height:180px; padding:12px; font-size:14px; border:1px solid #ccc; border-radius:10px; resize: vertical; margin-bottom:16px;"></textarea>
-        <button class="btn" onclick="simpanCatatan()" style="background:#007bff; color:white; border:none; padding:12px 20px; font-size:14px; border-radius:8px; cursor:pointer;">💾 Simpan</button>
-      </div>
-      <div style="flex: 1 1 60%; background:white; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-        <h3>📌 Note list</h3>
-        <div id="daftarCatatan" style="max-height:400px; overflow-y:auto;"></div>
-        <div id="previewArea" style="display:none; margin-top:20px; background:#fff; padding:18px; border:1px solid #ccc; border-radius:10px;"></div>
-      </div>
-    </div>
-  `;
 
-  tampilkanCatatan();
-}
+    // Proteksi halaman supaya tidak bisa diakses tanpa login
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'login.html';
+      }
+    });
 
-// Simpan catatan ke Firestore
-  function simpanCatatan() {
-    const isi = document.getElementById("inputCatatan").value.trim();
-    if (isi === "") {
-      alert("Catatan tidak boleh kosong!");
-      return;
+    // Tombol logout
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      auth.signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    });
+
+    function tampilkanHalamanCatatan() {
+      const content = document.getElementById("mainContent");
+      content.innerHTML = `
+        <h2>📒 Notes</h2>
+        <div style="display:flex; gap:24px; flex-wrap: wrap;">
+          <div style="flex: 1 1 35%; background:white; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+            <textarea id="inputCatatan" placeholder="Tulis sesuatu di sini..." style="width:100%; height:180px; padding:12px; font-size:14px; border:1px solid #ccc; border-radius:10px; resize: vertical; margin-bottom:16px;"></textarea>
+            <button class="btn" onclick="simpanCatatan()" style="background:#007bff; color:white; border:none; padding:12px 20px; font-size:14px; border-radius:8px; cursor:pointer;">💾 Simpan</button>
+          </div>
+          <div style="flex: 1 1 60%; background:white; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+            <h3>📌 Note list</h3>
+            <div id="daftarCatatan" style="max-height:400px; overflow-y:auto;"></div>
+            <div id="previewArea" style="display:none; margin-top:20px; background:#fff; padding:18px; border:1px solid #ccc; border-radius:10px;"></div>
+          </div>
+        </div>
+      `;
+
+      tampilkanCatatan();
     }
 
-    const catatan = {
-      isi: isi,
-      waktu: new Date().toLocaleString("id-ID")
-    };
+    // Simpan catatan ke Firestore
+    function simpanCatatan() {
+      const isi = document.getElementById("inputCatatan").value.trim();
+      if (isi === "") {
+        alert("Catatan tidak boleh kosong!");
+        return;
+      }
 
-    db.collection("catatan").add(catatan)
-      .then(() => {
-        document.getElementById("inputCatatan").value = "";
-        tampilkanCatatan();
-      })
-      .catch((error) => {
-        console.error("Gagal menyimpan catatan: ", error);
-        alert("Gagal menyimpan catatan!");
-      });
-  }
+      const catatan = {
+        isi: isi,
+        waktu: new Date().toLocaleString("id-ID")
+      };
 
-  // Tampilkan daftar catatan dari Firestore
-  function tampilkanCatatan() {
-    const container = document.getElementById("daftarCatatan");
-    container.innerHTML = "<i>Memuat catatan...</i>";
-
-    db.collection("catatan")
-      .orderBy("waktu", "desc")
-      .get()
-      .then((querySnapshot) => {
-        container.innerHTML = "";
-        if (querySnapshot.empty) {
-          container.innerHTML = "<i>Tidak ada catatan.</i>";
-          return;
-        }
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const item = document.createElement("div");
-          item.className = "catatan-item";
-          item.style = `
-            background: #f9f9f9;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-left: 5px solid #007bff;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.3s;
-          `;
-          item.textContent = data.isi.length > 60 ? data.isi.substring(0, 60) + "..." : data.isi;
-          item.onclick = () => tampilkanPreview(doc.id, data);
-          container.appendChild(item);
+      db.collection("catatan").add(catatan)
+        .then(() => {
+          document.getElementById("inputCatatan").value = "";
+          tampilkanCatatan();
+        })
+        .catch((error) => {
+          console.error("Gagal menyimpan catatan: ", error);
+          alert("Gagal menyimpan catatan!");
         });
+    }
 
-        document.getElementById("previewArea").style.display = "none";
-      })
-      .catch((error) => {
-        console.error("Gagal mengambil catatan: ", error);
-        container.innerHTML = "<i>Gagal memuat catatan.</i>";
-      });
-  }
+    // Tampilkan daftar catatan dari Firestore
+    function tampilkanCatatan() {
+      const container = document.getElementById("daftarCatatan");
+      container.innerHTML = "<i>Memuat catatan...</i>";
 
-  // Tampilkan pratinjau catatan
-  function tampilkanPreview(id, data) {
-    const preview = document.getElementById("previewArea");
-    preview.innerHTML = `
-      <button onclick="hapusCatatan('${id}')" style="background:red; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:6px; float:right; cursor:pointer;">Hapus</button>
-      <div style="color: gray; font-size: 13px; margin-bottom: 8px;">${data.waktu}</div>
-      <div>${data.isi.replace(/\n/g, "<br>")}</div>
-    `;
-    preview.style.display = "block";
-  }
+      db.collection("catatan")
+        .orderBy("waktu", "desc")
+        .get()
+        .then((querySnapshot) => {
+          container.innerHTML = "";
+          if (querySnapshot.empty) {
+            container.innerHTML = "<i>Tidak ada catatan.</i>";
+            return;
+          }
 
-  // Hapus catatan dari Firestore
-  function hapusCatatan(id) {
-    if (!confirm("Yakin ingin menghapus catatan ini?")) return;
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const item = document.createElement("div");
+            item.className = "catatan-item";
+            item.style = `
+              background: #f9f9f9;
+              padding: 12px;
+              margin-bottom: 10px;
+              border-left: 5px solid #007bff;
+              border-radius: 6px;
+              cursor: pointer;
+              transition: 0.3s;
+            `;
+            item.textContent = data.isi.length > 60 ? data.isi.substring(0, 60) + "..." : data.isi;
+            item.onclick = () => tampilkanPreview(doc.id, data);
+            container.appendChild(item);
+          });
 
-    db.collection("catatan").doc(id).delete()
-      .then(() => {
-        tampilkanCatatan();
-        document.getElementById("previewArea").style.display = "none";
-      })
-      .catch((error) => {
-        console.error("Gagal menghapus catatan: ", error);
-        alert("Gagal menghapus catatan!");
-      });
-  }
+          document.getElementById("previewArea").style.display = "none";
+        })
+        .catch((error) => {
+          console.error("Gagal mengambil catatan: ", error);
+          container.innerHTML = "<i>Gagal memuat catatan.</i>";
+        });
+    }
+
+    // Tampilkan pratinjau catatan
+    function tampilkanPreview(id, data) {
+      const preview = document.getElementById("previewArea");
+      preview.innerHTML = `
+        <button onclick="hapusCatatan('${id}')" style="background:red; color:white; border:none; padding:6px 12px; font-size:12px; border-radius:6px; float:right; cursor:pointer;">Hapus</button>
+        <div style="color: gray; font-size: 13px; margin-bottom: 8px;">${data.waktu}</div>
+        <div>${data.isi.replace(/\n/g, "<br>")}</div>
+      `;
+      preview.style.display = "block";
+    }
+
+    // Hapus catatan dari Firestore
+    function hapusCatatan(id) {
+      if (!confirm("Yakin ingin menghapus catatan ini?")) return;
+
+      db.collection("catatan").doc(id).delete()
+        .then(() => {
+          tampilkanCatatan();
+          document.getElementById("previewArea").style.display = "none";
+        })
+        .catch((error) => {
+          console.error("Gagal menghapus catatan: ", error);
+          alert("Gagal menghapus catatan!");
+        });
+    }
   </script>
 
   <script src="script.js"></script>
