@@ -27,7 +27,7 @@
       margin-bottom: 1.5rem;
       color: #007bff;
     }
-    input[type="password"] {
+    input {
       width: 100%;
       padding: 0.75rem;
       margin-bottom: 1rem;
@@ -57,21 +57,47 @@
 <body>
   <div class="login-container">
     <h2>Login Admin</h2>
-    <input type="password" id="adminPassword" placeholder="Masukkan password">
-    <button onclick="loginSebagaiAdmin()">Login</button>
+    <input type="email" id="email" placeholder="Masukkan email" />
+    <input type="password" id="password" placeholder="Masukkan password" />
+    <button onclick="loginAdmin()">Login</button>
     <div class="error-message" id="loginError"></div>
   </div>
 
-  <script>
-    function loginSebagaiAdmin() {
-      const password = document.getElementById('adminPassword').value;
-      if (password === 'admin1212') {
-        localStorage.setItem('isAdmin', 'true');
-        window.location.href = 'dashboard.html';
-      } else {
-        document.getElementById('loginError').textContent = 'Password salah!';
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+      authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+      projectId: "inventory-gudang-16dfe",
+      storageBucket: "inventory-gudang-16dfe.appspot.com",
+      messagingSenderId: "663364522026",
+      appId: "1:663364522026:web:f48fb1ba0331695de83353"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.loginAdmin = function () {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorDiv = document.getElementById('loginError');
+      errorDiv.textContent = "";
+
+      if (!email || !password) {
+        errorDiv.textContent = "Email dan password harus diisi!";
+        return;
       }
-    }
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          window.location.href = 'index.html';
+        })
+        .catch(error => {
+          errorDiv.textContent = "Login gagal: " + error.message;
+        });
+    };
   </script>
 </body>
 </html>
