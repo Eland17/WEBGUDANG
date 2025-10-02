@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Barang Masuk</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e9f0fb;
+            padding: 2rem;
+            margin: 0;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 1.5rem;
+            min-height: 100vh;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #004085;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+        form {
+            max-width: 600px;
+            width: 100%;
+            background: #fff;
+            padding: 2rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            display: block;
+            color: #222;
+        }
+        .input-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="date"] {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            border: 1.8px solid #a3bffa;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #222;
+            background-color: #fff;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus {
+            border-color: #3b6dfc;
+            outline: none;
+        }
+        .suggestion-box {
+            position: absolute;
+            background: #fff;
+            border: none;
+            width: 100%;
+            max-height: 160px;
+            overflow-y: auto;
+            z-index: 9999;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.75rem;
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .suggestion-box li {
+            padding: 6px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .suggestion-box li:hover,
+        .suggestion-box li.active {
+            background-color: #e0e0e0;
+        }
+        .btn-container {
+            text-align: center;
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            padding: 0.4rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 7px;
+            color: white;
+            background: #3b6dfc;
+            min-width: 110px;
+            transition: background-color 0.3s ease;
+        }
+        button.btn-back {
+            background: #6c757d;
+        }
+        button.btn-back:hover {
+            background: #565e64;
+        }
+        button:hover {
+            background: #2c51d9;
+        }
+        #calculatorPanel {
+            display: none;
+            width: 340px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 20px 25px;
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        #calculatorPanel.active {
+            display: block;
+        }
+        #calculatorPanel h2 {
+            margin-top: 0;
+            text-align: center;
+            color: #333;
+        }
+        #calculatorPanel table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        #calculatorPanel th, #calculatorPanel td {
+            border: 1px solid #ccc;
+            padding: 7px;
+            text-align: right;
+        }
+        .result {
+            margin-top: 18px;
+            font-size: 15px;
+            padding: 8px;
+            background: #e6f5ea;
+            border: 1px solid #bde5cb;
+            border-radius: 6px;
+            color: #1b5e20;
+        }
+        .result span {
+            float: right;
+            font-weight: bold;
+        }
+        .btn-close-kalkulator {
+            display: block;
+            margin: 0 auto 10px auto;
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .btn-close-kalkulator:hover {
+            background: #c9302c;
+        }
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                align-items: center;
+            }
+            #calculatorPanel {
+                width: 100%;
+                max-height: 300px;
+                position: relative;
+                top: auto;
+                margin-top: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <form id="formMasuk" autocomplete="off">
+        <h2>Barang Masuk</h2>
+        <div class="input-container">
+            <label for="kode_barang">Kode Barang</label>
+            <input type="text" id="kode_barang" name="kode_barang" required autocomplete="off" />
+            <ul id="suggestionsKode" class="suggestion-box"></ul>
+        </div>
+        <div class="input-container">
+            <label for="nama_barang">Nama Barang</label>
+            <input type="text" id="nama_barang" name="nama_barang" required autocomplete="off" />
+            <ul id="suggestionsNama" class="suggestion-box"></ul>
+        </div>
+        <div class="input-container">
+            <label for="kode_buyer">Kode Buyer</label>
+            <input type="text" id="kode_buyer" name="kode_buyer" required autocomplete="off" />
+            <ul id="suggestionsBuyer" class="suggestion-box"></ul>
+        </div>
+        <div class="input-container">
+            <label for="satuan">Satuan</label>
+            <input type="text" id="satuan" name="satuan" placeholder="Contoh: pcs, kg, lusin" autocomplete="off" />
+            <ul id="suggestionsSatuan" class="suggestion-box"></ul>
+        </div>
+        <label for="jumlah">Jumlah</label>
+        <input type="number" id="jumlah" name="jumlah" required min="1" />
+        <label for="keterangan">Keterangan</label>
+        <input type="text" id="keterangan" name="keterangan" />
+        <label for="tanggal">Tanggal Masuk</label>
+        <input type="date" id="tanggal" name="tanggal" required />
+        <div class="btn-container">
+            <button type="submit">Simpan</button>
+            <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali ke Dashboard</button>
+            <button type="button" onclick="openCalculator()">Kalkulator</button>
+        </div>
+    </form>
+    <aside id="calculatorPanel">
+        <button class="btn-close-kalkulator" onclick="closeCalculator()">Tutup ×</button>
+        <h2>Kalkulator</h2>
+        <table>
+            <tbody id="calculatorBody"></tbody>
+        </table>
+        <div class="result">COUNT : <span id="jumlahCalc">0</span></div>
+        <div class="result">SUM : <span id="totalCalc">0</span></div>
+    </aside>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+            authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+            projectId: "inventory-gudang-16dfe",
+            storageBucket: "inventory-gudang-16dfe.firebasestorage.app",
+            messagingSenderId: "663364522026",
+            appId: "1:663364522026:web:f48fb1ba0331695de83353"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const barangMap = new Map();
+        const buyerSet = new Set();
+        const satuanSet = new Set();
+
+        // Menggunakan onSnapshot untuk mendengarkan perubahan real-time dari Firebase
+        db.collection('barangMasuk').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                const item = change.doc.data();
+                if (item.kode_barang && item.nama_barang) {
+                    barangMap.set(item.kode_barang, item.nama_barang);
+                }
+                if (item.kode_buyer) buyerSet.add(item.kode_buyer);
+                if (item.satuan) satuanSet.add(item.satuan);
+            });
+            showSuggestionsKode();
+            showSuggestionsNama();
+            showSuggestionsBuyer();
+            showSuggestionsSatuan();
+        });
+
+        db.collection('barangKeluar').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                const item = change.doc.data();
+                if (item.kode_barang && item.nama_barang) {
+                    barangMap.set(item.kode_barang, item.nama_barang);
+                }
+                if (item.kode_buyer) buyerSet.add(item.kode_buyer);
+                if (item.satuan) satuanSet.add(item.satuan);
+            });
+            showSuggestionsKode();
+            showSuggestionsNama();
+            showSuggestionsBuyer();
+            showSuggestionsSatuan();
+        });
+
+        const inputKode = document.getElementById('kode_barang');
+        const inputNama = document.getElementById('nama_barang');
+        const inputBuyer = document.getElementById('kode_buyer');
+        const inputSatuan = document.getElementById('satuan');
+
+        const suggestKode = document.getElementById('suggestionsKode');
+        const suggestNama = document.getElementById('suggestionsNama');
+        const suggestBuyer = document.getElementById('suggestionsBuyer');
+        const suggestSatuan = document.getElementById('suggestionsSatuan');
+
+        function showSuggestionsKode() {
+            const val = inputKode.value.trim().toLowerCase();
+            suggestKode.innerHTML = '';
+            if (!val) return;
+            const matched = [...barangMap.entries()]
+                .filter(([kode]) => kode.toLowerCase().includes(val))
+                .slice(0, 10);
+            matched.forEach(([kode, nama]) => {
+                const li = document.createElement('li');
+                li.textContent = kode;
+                li.title = nama;
+                li.addEventListener('click', () => {
+                    inputKode.value = kode;
+                    inputNama.value = nama;
+                    suggestKode.innerHTML = '';
+                    suggestNama.innerHTML = '';
+                });
+                suggestKode.appendChild(li);
+            });
+        }
+
+        function showSuggestionsNama() {
+            const val = inputNama.value.trim().toLowerCase();
+            suggestNama.innerHTML = '';
+            if (!val) return;
+            const matched = [...barangMap.entries()]
+                .filter(([, nama]) => nama.toLowerCase().includes(val))
+                .slice(0, 10);
+            matched.forEach(([kode, nama]) => {
+                const li = document.createElement('li');
+                li.textContent = nama;
+                li.title = kode;
+                li.addEventListener('click', () => {
+                    inputNama.value = nama;
+                    inputKode.value = kode;
+                    suggestNama.innerHTML = '';
+                    suggestKode.innerHTML = '';
+                });
+                suggestNama.appendChild(li);
+            });
+        }
+
+        function showSuggestionsBuyer() {
+            const val = inputBuyer.value.trim().toLowerCase();
+            suggestBuyer.innerHTML = '';
+            if (!val) return;
+            const matched = [...buyerSet]
+                .filter(item => item.toLowerCase().includes(val))
+                .slice(0, 10);
+            matched.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                li.addEventListener('click', () => {
+                    inputBuyer.value = item;
+                    suggestBuyer.innerHTML = '';
+                });
+                suggestBuyer.appendChild(li);
+            });
+        }
+
+        function showSuggestionsSatuan() {
+            const val = inputSatuan.value.trim().toLowerCase();
+            suggestSatuan.innerHTML = '';
+            if (!val) return;
+            const matched = [...satuanSet]
+                .filter(item => item.toLowerCase().includes(val))
+                .slice(0, 10);
+            matched.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                li.addEventListener('click', () => {
+                    inputSatuan.value = item;
+                    suggestSatuan.innerHTML = '';
+                });
+                suggestSatuan.appendChild(li);
+            });
+        }
+
+        inputKode.addEventListener('input', showSuggestionsKode);
+        inputNama.addEventListener('input', showSuggestionsNama);
+        inputBuyer.addEventListener('input', showSuggestionsBuyer);
+        inputSatuan.addEventListener('input', showSuggestionsSatuan);
+
+        document.addEventListener('click', (e) => {
+            if (!inputKode.contains(e.target)) suggestKode.innerHTML = '';
+            if (!inputNama.contains(e.target)) suggestNama.innerHTML = '';
+            if (!inputBuyer.contains(e.target)) suggestBuyer.innerHTML = '';
+            if (!inputSatuan.contains(e.target)) suggestSatuan.innerHTML = '';
+        });
+
+        const form = document.getElementById('formMasuk');
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(form).entries());
+            data.jumlah = Number(data.jumlah);
+            try {
+                await db.collection('barangMasuk').add({
+                    ...data,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Simpan ke localStorage untuk cache
+                let simpanan = JSON.parse(localStorage.getItem('dataMasuk')) || [];
+                simpanan.push(data);
+                localStorage.setItem('dataMasuk', JSON.stringify(simpanan));
+
+                alert('Data berhasil disimpan ke Firebase dan LocalStorage.');
+                form.reset();
+            } catch (err) {
+                console.error(err);
+                alert('Gagal menyimpan data. Coba lagi.');
+            }
+        });
+
+        function openCalculator() {
+            document.getElementById('calculatorPanel').classList.add('active');
+        }
+        function closeCalculator() {
+            document.getElementById('calculatorPanel').classList.remove('active');
+        }
+
+        const calculatorBody = document.getElementById('calculatorBody');
+        for (let r = 0; r < 5; r++) {
+            const tr = document.createElement('tr');
+            for (let c = 0; c < 4; c++) {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'angka';
+                input.dataset.row = r;
+                input.dataset.col = c;
+                td.appendChild(input);
+                tr.appendChild(td);
+            }
+            calculatorBody.appendChild(tr);
+        }
+
+        const inputs = document.querySelectorAll('#calculatorPanel .angka');
+        const totalEl = document.getElementById('totalCalc');
+        const jumlahEl = document.getElementById('jumlahCalc');
+
+        function hitungOtomatis() {
+            let total = 0;
+            let count = 0;
+            inputs.forEach(input => {
+                const val = input.value.trim();
+                const num = parseFloat(val);
+                if (!isNaN(num)) {
+                    count++;
+                    total += num;
+                }
+            });
+            jumlahEl.textContent = count;
+            totalEl.textContent = total.toFixed(2);
+        }
+
+        inputs.forEach(input => {
+            input.addEventListener('input', hitungOtomatis);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    let r = parseInt(input.dataset.row);
+                    let c = parseInt(input.dataset.col);
+                    r++;
+                    if (r > 4) {
+                        r = 0;
+                        c++;
+                    }
+                    if (c > 3) return;
+                    const nextInput = document.querySelector(`.angka[data-row="${r}"][data-col="${c}"]`);
+                    if (nextInput) nextInput.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
