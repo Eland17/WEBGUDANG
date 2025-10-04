@@ -12,6 +12,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
 <style>
 /* Definisikan font Avenir dari file lokal */
 @font-face {
@@ -64,7 +66,7 @@ td.saldo-rendah { background-color: #fff3cd; }
 footer { background:#007bff; color:white; text-align:center; padding:10px 0; flex-shrink:0; }
 
 /* Modal */
-#modalKartuStok, #modalStokOpname { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; }
+#modalKartuStok, #modalStokOpname, #modalGrafik { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; }
 .modal-content { background:#fff; padding:20px; border-radius:8px; width:95%; max-width:1100px; max-height:90vh; overflow:auto; }
 #modalKartuStok table, #modalStokOpname table { width:100%; border-collapse:collapse; margin-top:10px; min-width:700px; }
 #modalKartuStok th, #modalKartuStok td, #modalStokOpname th, #modalStokOpname td { border:1px solid #333; padding:6px; text-align:center; }
@@ -83,6 +85,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
       <a href="form-keluar.html">Barang Keluar</a>
       <a href="mutasi.html">Mutasi Barang</a>
       <a href="#" id="btnStokOpname">Laporan Stok Opname</a>
+      <a href="#" id="btnGrafik">Grafik Mutasi Tahunan</a>
       <button id="btnLogout" style="background:#d9534f;">Logout</button>
     </nav>
 
@@ -208,6 +211,18 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     </div>
 </div>
 
+<div id="modalGrafik">
+  <div class="modal-content" style="max-width:800px; max-height:80vh;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+      <h3>Grafik Mutasi Tahunan (12 Bulan Terakhir)</h3>
+      <span style="cursor:pointer; font-size:28px; font-weight:bold;" id="closeModalGrafik">&times;</span>
+    </div>
+    <div style="margin-top:10px; height: 500px;">
+      <canvas id="mutasiChart"></canvas>
+    </div>
+  </div>
+</div>
+
 <script>
 // Firebase init
 const firebaseConfig = {
@@ -258,7 +273,7 @@ function renderKartuStok(){
   // Filter data terlebih dahulu
   let filtered = kartuStokData.filter(row => {
     const isWithinDateRange = (!dari || new Date(row.tanggal) >= new Date(dari)) &&
-                               (!sampai || new Date(row.tanggal) <= new Date(sampai));
+                              (!sampai || new Date(row.tanggal) <= new Date(sampai));
     const hasMovement = row.masuk > 0 || row.keluar > 0;
     return isWithinDateRange && hasMovement;
   });
@@ -312,7 +327,7 @@ document.getElementById("btnPrintKartu").addEventListener("click", () => {
   // Filter data untuk PDF
   let filtered = kartuStokData.filter(row => {
     const isWithinDateRange = (!dari || new Date(row.tanggal) >= new Date(dari)) &&
-                               (!sampai || new Date(row.tanggal) <= new Date(sampai));
+                              (!sampai || new Date(row.tanggal) <= new Date(sampai));
     const hasMovement = row.masuk > 0 || row.keluar > 0;
     return isWithinDateRange && hasMovement;
   });
@@ -661,11 +676,11 @@ const btnCancelPassword = document.getElementById("btnCancelPassword");
 const passwordModalTitle = document.getElementById("passwordModalTitle");
 
 // === PERHATIAN: GANTI PASSWORD DI BAWAH INI ===
-// Simpan hash password di database atau gunakan Firebase Auth untuk keamanan
 const passwords = {
     'form-masuk.html': 'ELAND123',
     'form-keluar.html': 'ELAND123',
-    'laporan-opname': 'ELAND123' // Password untuk laporan stok opname
+    'laporan-opname': 'ELAND123' 
+    // Password 'grafik' dihapus
 };
 
 let redirectUrl = '';
@@ -693,18 +708,31 @@ function verifyPassword() {
     }
 }
 
-// Tambahkan event listener untuk tautan
+// Tambahkan event listener untuk tautan (kecuali Grafik)
 document.querySelectorAll('.sidebar a').forEach(link => {
-    link.addEventListener('click', (event) => {
-        const url = link.getAttribute('href');
-        const text = link.textContent;
+    const url = link.getAttribute('href');
+    const text = link.textContent;
+    
+    // Lewati tombol Grafik
+    if (link.id === 'btnGrafik') {
+        return;
+    }
 
-        if (passwords[url]) {
+    if (passwords[url]) {
+        link.addEventListener('click', (event) => {
             event.preventDefault(); // Mencegah navigasi default
             showPasswordModal(url, text);
-        }
-    });
+        });
+    }
 });
+
+// === PERUBAHAN UTAMA DI SINI ===
+// Event Listener untuk Tombol Grafik (TANPA PASSWORD)
+document.getElementById("btnGrafik").addEventListener('click', (e) => {
+  e.preventDefault();
+  openGrafikModal(); // Panggil fungsi langsung
+});
+// ===============================
 
 btnSubmitPassword.addEventListener('click', verifyPassword);
 passwordInput.addEventListener('keypress', (e) => {
@@ -723,6 +751,155 @@ window.addEventListener('click', (e) => {
         modalPassword.style.display = 'none';
     }
 });
+
+// Fungsi dan Logika untuk Grafik
+const modalGrafik = document.getElementById("modalGrafik");
+const closeModalGrafik = document.getElementById("closeModalGrafik");
+let mutasiChart = null; // Variabel global untuk menyimpan instance Chart
+
+closeModalGrafik.onclick = () => modalGrafik.style.display = "none";
+window.addEventListener("click", e => { if (e.target === modalGrafik) modalGrafik.style.display = "none"; });
+
+function getDatesForLastTwelveMonths() {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const labels = [];
+    const today = new Date();
+    
+    // Mulai dari 11 bulan yang lalu sampai bulan ini (total 12 bulan)
+    for (let i = 11; i >= 0; i--) {
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        labels.push(`${months[date.getMonth()]} ${date.getFullYear()}`);
+    }
+    return labels;
+}
+
+function getStartOfTwelveMonthsAgo() {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 11);
+    d.setDate(1); // Mulai dari tanggal 1
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+async function fetchMutasiDataForChart() {
+    const startPeriod = getStartOfTwelveMonthsAgo();
+
+    try {
+        
+        // Ambil semua data Masuk dan Keluar.
+        const masukSnap = await db.collection("barangMasuk").get();
+        const keluarSnap = await db.collection("barangKeluar").get();
+        
+        const dataByMonth = {};
+        const monthLabels = getDatesForLastTwelveMonths();
+        
+        // Inisialisasi data bulanan
+        for(let label of monthLabels) {
+            dataByMonth[label] = { masuk: 0, keluar: 0 };
+        }
+
+        const dateToMonthLabel = (dateString) => {
+            const date = new Date(dateString);
+            const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+            return `${months[date.getMonth()]} ${date.getFullYear()}`;
+        };
+
+        const filterAndProcess = (snapshot, type) => {
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const transactionDate = new Date(d.tanggal);
+                
+                // Hanya proses data dalam periode 12 bulan terakhir
+                if (transactionDate >= startPeriod) {
+                    const monthLabel = dateToMonthLabel(d.tanggal);
+                    if (dataByMonth[monthLabel]) {
+                        dataByMonth[monthLabel][type] += d.jumlah || 0;
+                    }
+                }
+            });
+        };
+
+        filterAndProcess(masukSnap, 'masuk');
+        filterAndProcess(keluarSnap, 'keluar');
+        
+        const masukData = monthLabels.map(label => dataByMonth[label].masuk);
+        const keluarData = monthLabels.map(label => dataByMonth[label].keluar);
+
+        return { labels: monthLabels, masuk: masukData, keluar: keluarData };
+
+    } catch (error) {
+        console.error("Gagal mengambil data mutasi untuk grafik:", error);
+        alert("Gagal memuat data grafik. Cek konsol untuk detail.");
+        return { labels: [], masuk: [], keluar: [] };
+    }
+}
+
+async function openGrafikModal() {
+    modalGrafik.style.display = "flex";
+    
+    const chartData = await fetchMutasiDataForChart();
+    
+    renderMutasiChart(chartData.labels, chartData.masuk, chartData.keluar);
+}
+
+function renderMutasiChart(labels, masukData, keluarData) {
+    const ctx = document.getElementById('mutasiChart').getContext('2d');
+    
+    // Hancurkan instance chart yang lama jika ada
+    if (mutasiChart) {
+        mutasiChart.destroy();
+    }
+    
+    mutasiChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Barang Masuk',
+                data: masukData,
+                borderColor: '#28a745', // Hijau
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true,
+                tension: 0.1
+            }, {
+                label: 'Barang Keluar',
+                data: keluarData,
+                borderColor: '#dc3545', // Merah
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Total Barang Masuk & Keluar per Bulan'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Jumlah Unit'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Periode (Bulan)'
+                    }
+                }
+            }
+        }
+    });
+}
 </script>
 </body>
 </html>
