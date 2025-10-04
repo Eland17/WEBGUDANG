@@ -258,17 +258,23 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Map kode_barang => nama_barang
+        // Map kode_barang => { nama_barang: string, satuan: string }
         const barangMap = new Map();
         const buyerSet = new Set();
         const satuanSet = new Set();
 
         // DENGARKAN PERUBAHAN REAL-TIME DARI FIREBASE UNTUK SEMUA DATA
-        db.collection('barangMasuk').onSnapshot(snapshot => {
+        const processSnapshot = (snapshot) => {
             snapshot.docChanges().forEach(change => {
                 const item = change.doc.data();
                 if (item.kode_barang && item.nama_barang) {
-                    barangMap.set(item.kode_barang, item.nama_barang);
+                    // *** MODIFIKASI: Simpan nama_barang dan satuan ke barangMap ***
+                    // Gunakan satuan dari item jika ada, jika tidak, gunakan nilai yang sudah ada di Map
+                    const existingData = barangMap.get(item.kode_barang) || {};
+                    barangMap.set(item.kode_barang, {
+                        nama_barang: item.nama_barang,
+                        satuan: item.satuan || existingData.satuan || '' // Prioritas: item.satuan > existing.satuan > ''
+                    });
                 }
                 if (item.kode_buyer) buyerSet.add(item.kode_buyer);
                 if (item.satuan) satuanSet.add(item.satuan);
@@ -278,23 +284,11 @@
             showSuggestionsNama();
             showSuggestionsBuyer();
             showSuggestionsSatuan();
-        });
+        };
 
-        db.collection('barangKeluar').onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                const item = change.doc.data();
-                if (item.kode_barang && item.nama_barang) {
-                    barangMap.set(item.kode_barang, item.nama_barang);
-                }
-                if (item.kode_buyer) buyerSet.add(item.kode_buyer);
-                if (item.satuan) satuanSet.add(item.satuan);
-            });
-            // Memastikan suggestions diperbarui setelah setiap perubahan
-            showSuggestionsKode();
-            showSuggestionsNama();
-            showSuggestionsBuyer();
-            showSuggestionsSatuan();
-        });
+        db.collection('barangMasuk').onSnapshot(processSnapshot);
+        db.collection('barangKeluar').onSnapshot(processSnapshot);
+
 
         // Elements
         const inputKode = document.getElementById('kode_barang');
@@ -312,18 +306,25 @@
             const val = inputKode.value.trim().toLowerCase();
             suggestKode.innerHTML = '';
             if (!val) return;
+            
+            // Filter dari kode
             const matched = [...barangMap.entries()]
                 .filter(([kode]) => kode.toLowerCase().includes(val))
                 .slice(0, 10);
-            matched.forEach(([kode, nama]) => {
+            
+            matched.forEach(([kode, data]) => {
+                const nama = data.nama_barang;
+                const satuan = data.satuan; // Ambil satuan
                 const li = document.createElement('li');
                 li.textContent = kode;
-                li.title = nama;
+                li.title = `${nama} (${satuan})`; // Tampilkan nama dan satuan di title
                 li.addEventListener('click', () => {
                     inputKode.value = kode;
                     inputNama.value = nama; // sinkron nama
+                    inputSatuan.value = satuan; // *** SINKRONISASI SATUAN ***
                     suggestKode.innerHTML = '';
                     suggestNama.innerHTML = '';
+                    suggestSatuan.innerHTML = '';
                 });
                 suggestKode.appendChild(li);
             });
@@ -334,18 +335,28 @@
             const val = inputNama.value.trim().toLowerCase();
             suggestNama.innerHTML = '';
             if (!val) return;
+
+            // Filter dari nama
             const matched = [...barangMap.entries()]
-                .filter(([, nama]) => nama.toLowerCase().includes(val))
+                .filter(([, data]) => data.nama_barang.toLowerCase().includes(val))
                 .slice(0, 10);
-            matched.forEach(([kode, nama]) => {
+            
+            matched.forEach(([kode, data]) => {
+                const nama = data.nama_barang;
+                const satuan = data.satuan; // Ambil satuan
                 const li = document.createElement('li');
-                li.textContent = nama;
-                li.title = kode;
+                
+                // *** MODIFIKASI: HANYA TAMPILKAN NAMA BARANG DI SUGGESTION BOX ***
+                li.textContent = nama; 
+                li.title = `${kode} (${satuan})`; // Informasi lengkap tetap ada di title
+                
                 li.addEventListener('click', () => {
                     inputNama.value = nama;
                     inputKode.value = kode; // sinkron kode
+                    inputSatuan.value = satuan; // *** SINKRONISASI SATUAN TETAP JALAN OTOMATIS DI KOLOM SATUAN ***
                     suggestNama.innerHTML = '';
                     suggestKode.innerHTML = '';
+                    suggestSatuan.innerHTML = '';
                 });
                 suggestNama.appendChild(li);
             });
