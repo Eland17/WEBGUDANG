@@ -105,15 +105,12 @@
   .result span { float: right; font-weight: bold; }
 
   .close-btn {
-    position: absolute;
-    top: 6px;
-    right: 10px;
-    background: none;
-    border: none;
-    color: #888;
-    font-size: 1rem;
-    cursor: pointer;
-  }
+  position: relative; /* ubah dari absolute */
+  top: 0;
+  right: 0;
+  float: right; /* biar tetap di kanan atas header */
+  margin-bottom: 10px;
+}
   .close-btn:hover { color: #000; }
 
   /* Tombol kalkulator kecil untuk mobile */
@@ -378,3 +375,4 @@
   </script>
 </body>
 </html>
+
