@@ -118,18 +118,18 @@
 
   /* Tombol kalkulator kecil untuk mobile */
   .btn-calc { display: none; }
-  @media (max-width: 768px) {
+  @media (max-width: 738px) {
     .btn-calc {
       display: inline-block;
       background: #17a2b8;
       border: none;
       color: white;
       font-size: 0.75rem;   
-      padding: 0.2rem 0.4rem; 
+      padding: rem rem; 
       border-radius: 4px;
       cursor: pointer;
-      margin-left: 5px;
-      min-width: 40px; 
+      margin-left: 6px;
+      min-width: 30px; 
     }
     .btn-calc:hover { background: #138496; }
 
@@ -186,23 +186,28 @@
       <ul id="suggestionsSatuan" class="suggestion-box"></ul>
     </div>
 
-    <div class="jumlah-container">
-      <div style="flex:1; display:flex; flex-direction: column;">
-        <label for="jumlah">Jumlah</label>
-        <div style="display:flex; align-items:center;">
-          <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:3;" />
-          <button type="button" class="btn-calc" id="toggleCalc">Calc</button>
-        </div>
-      </div>
+   <div class="jumlah-container">
+  <div style="flex:1; display:flex; flex-direction: column;">
+    <label for="jumlah">Jumlah</label>
+    <div style="display:flex; align-items:center; gap:5px;">
+      <!-- Input Jumlah lebih panjang -->
+      <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:4;" />
 
-      <div id="calculatorPanel">
-        <button type="button" class="close-btn" id="closeCalc">✖</button>
-        <h2>Kalkulator</h2>
-        <table><tbody id="calculatorBody"></tbody></table>
-        <div class="result">COUNT : <span id="jumlahCalc">0</span></div>
-        <div class="result">SUM   : <span id="totalCalc">0</span></div>
-      </div>
+      <!-- Tombol Calc kecil -->
+      <button type="button" class="btn-calc" id="toggleCalc" style="flex:1; max-width:50px;">Calc</button>
     </div>
+  </div>
+
+  <!-- Kalkulator popup -->
+  <div id="calculatorPanel">
+    <button type="button" class="close-btn" id="closeCalc">✖</button>
+    <h2>Kalkulator</h2>
+    <table><tbody id="calculatorBody"></tbody></table>
+    <div class="result">COUNT : <span id="jumlahCalc">0</span></div>
+    <div class="result">SUM   : <span id="totalCalc">0</span></div>
+  </div>
+</div>
+
 
     <label for="keterangan">Keterangan</label>
     <input type="text" id="keterangan" name="keterangan" />
