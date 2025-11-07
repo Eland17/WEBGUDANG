@@ -141,6 +141,17 @@
     button { width: 100%; font-size: 0.85rem; padding: 0.5rem; }
     #calculatorPanel { position: static; width: 100%; margin-top: 1rem; right: auto; }
     .jumlah-container { flex-direction: column; }
+
+    /* Perbaikan label Jumlah di atas input */
+    .jumlah-container > div {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .jumlah-container label {
+      display: block;
+      margin-bottom: 0.3rem;
+      width: 100%;
+    }
   }
   </style>
 </head>
@@ -174,9 +185,12 @@
     </div>
 
     <div class="jumlah-container">
-      <div style="flex:1; display:flex; align-items:center;">
-        <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:1;" />
-        <button type="button" class="btn-calc" id="toggleCalc">Calc</button>
+      <div style="flex:1; display:flex; flex-direction: column;">
+        <label for="jumlah">Jumlah</label>
+        <div style="display:flex; align-items:center;">
+          <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:1;" />
+          <button type="button" class="btn-calc" id="toggleCalc">Calc</button>
+        </div>
       </div>
 
       <div id="calculatorPanel">
