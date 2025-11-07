@@ -74,9 +74,33 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 #modalKartuStok .angka-kanan.nol-value {
   padding-right: 0;
 }
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;          /* sesuaikan lebar sidebar di mobile */
+        left: -200px;           /* sembunyikan default */
+        transition: left 0.3s;
+    }
+    .sidebar.active { left: 0; } /* muncul saat toggle */
+    .hamburger {
+        display: block;
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        font-size: 24px;
+        z-index: 1001;
+        cursor: pointer;
+        color: #333; /* warna hamburger sama seperti teks header */
+    }
+    .main { margin-left: 0; }      /* hilangkan margin untuk mobile */
+    table { font-size: 12px; display:block; overflow-x:auto; } /* scroll tabel */
+    table th, table td { padding:6px; } /* tabel lebih rapat di mobile */
+}
+.hamburger { display:none; } /* sembunyikan hamburger di desktop */
 </style>
 </head>
 <body>
+<div class="hamburger">&#9776;</div>
 <div class="wrapper">
   <header>Inventory Gudang</header>
   <div class="main-content">
@@ -900,7 +924,15 @@ function renderMutasiChart(labels, masukData, keluarData) {
         }
     });
 }
+
+// Toggle sidebar di mobile
+const hamburger = document.querySelector('.hamburger');
+const sidebar = document.querySelector('.sidebar');
+hamburger.addEventListener('click', () => {
+    sidebar.classList.toggle('active');
+});
 </script>
 </body>
 </html>
+
 
