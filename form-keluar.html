@@ -67,7 +67,6 @@
     outline: none;
   }
 
-  /* Suggestion box */
   .suggestion-box {
     position: absolute;
     background: #fff;
@@ -198,76 +197,63 @@
     background: #c9302c;
   }
 
- /* ✅ Responsif di HP */
-@media (max-width: 768px) {
-  body {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.6rem; /* lebih rapat */
+  @media (max-width: 768px) {
+    body {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 0.6rem;
+    }
+    form {
+      padding: 0.8rem;
+      max-width: 95%;
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+    h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      font-size: 0.8rem;
+    }
+    input[type="text"],
+    input[type="number"],
+    input[type="date"] {
+      font-size: 0.85rem;
+      padding: 0.5rem 0.6rem;
+    }
+    .btn-container {
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    button {
+      width: 100%;
+      min-width: unset;
+      font-size: 0.85rem;
+      padding: 0.5rem;
+    }
+    #calculatorPanel {
+      width: 95%;
+      position: relative;
+      top: auto;
+      margin-top: 0.8rem;
+      max-height: 350px;
+      padding: 0.8rem;
+    }
+    #calculatorPanel table td {
+      padding: 4px;
+    }
+    .result {
+      font-size: 0.85rem;
+      padding: 6px;
+    }
+    .btn-close-kalkulator {
+      font-size: 0.85rem;
+      padding: 4px 10px;
+    }
   }
-
-  form {
-    padding: 0.8rem; /* lebih kecil dari sebelumnya */
-    max-width: 95%; /* biar form tidak terlalu lebar */
-    margin: 0 auto;
-    border-radius: 8px;
-  }
-
-  h2 {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  label {
-    font-size: 0.8rem;
-  }
-
-  input[type="text"],
-  input[type="number"],
-  input[type="date"] {
-    font-size: 0.85rem;
-    padding: 0.5rem 0.6rem;
-  }
-
-  .btn-container {
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-top: 1rem;
-  }
-
-  button {
-    width: 100%;
-    min-width: unset;
-    font-size: 0.85rem;
-    padding: 0.5rem;
-  }
-
-  #calculatorPanel {
-    width: 95%;
-    position: relative;
-    top: auto;
-    margin-top: 0.8rem;
-    max-height: 350px;
-    padding: 0.8rem;
-  }
-
-  #calculatorPanel table td {
-    padding: 4px;
-  }
-
-  .result {
-    font-size: 0.85rem;
-    padding: 6px;
-  }
-
-  .btn-close-kalkulator {
-    font-size: 0.85rem;
-    padding: 4px 10px;
-  }
-}
-
-</style>
-
+  </style>
 </head>
 <body>
   <form id="formKeluar" autocomplete="off">
@@ -327,248 +313,231 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
-      authDomain: "inventory-gudang-16dfe.firebaseapp.com",
-      projectId: "inventory-gudang-16dfe",
-      storageBucket: "inventory-gudang-16dfe.firebasestorage.app",
-      messagingSenderId: "663364522026",
-      appId: "1:663364522026:web:f48fb1ba0331695de83353"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  // === FIREBASE CONFIG ===
+  const firebaseConfig = {
+    apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+    authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+    projectId: "inventory-gudang-16dfe",
+    storageBucket: "inventory-gudang-16dfe.firebasestorage.app",
+    messagingSenderId: "663364522026",
+    appId: "1:663364522026:web:f48fb1ba0331695de83353"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    // Ambil data dari localStorage untuk autocomplete
-    const dataMasuk = JSON.parse(localStorage.getItem('dataMasuk')) || [];
-    const dataKeluar = JSON.parse(localStorage.getItem('dataKeluar')) || [];
+  // === DATA MAP DAN SET ===
+  const barangMap = new Map();
+  const buyerSet = new Set();
+  const satuanSet = new Set();
 
-    // Map kode_barang => nama_barang
-    const barangMap = new Map();
-    const buyerSet = new Set();
-    const satuanSet = new Set();
+  // === AMBIL DATA FIRESTORE UNTUK AUTOCOMPLETE ===
+  async function loadDataFromFirestore() {
+    try {
+      const masukSnap = await db.collection('barangMasuk').get();
+      const keluarSnap = await db.collection('barangKeluar').get();
 
-    [...dataMasuk, ...dataKeluar].forEach(item => {
-      if (item.kode_barang && item.nama_barang) {
-        barangMap.set(item.kode_barang, item.nama_barang);
-      }
-      if (item.kode_buyer) buyerSet.add(item.kode_buyer);
-      if (item.satuan) satuanSet.add(item.satuan);
-    });
+      const dataMasuk = masukSnap.docs.map(doc => doc.data());
+      const dataKeluar = keluarSnap.docs.map(doc => doc.data());
 
-    // Elements
-    const inputKode = document.getElementById('kode_barang');
-    const inputNama = document.getElementById('nama_barang');
-    const inputBuyer = document.getElementById('kode_buyer');
-    const inputSatuan = document.getElementById('satuan');
+      console.log('Data barangMasuk:', dataMasuk.length);
+      console.log('Data barangKeluar:', dataKeluar.length);
 
-    const suggestKode = document.getElementById('suggestionsKode');
-    const suggestNama = document.getElementById('suggestionsNama');
-    const suggestBuyer = document.getElementById('suggestionsBuyer');
-    const suggestSatuan = document.getElementById('suggestionsSatuan');
+      localStorage.setItem('dataMasuk', JSON.stringify(dataMasuk));
+      localStorage.setItem('dataKeluar', JSON.stringify(dataKeluar));
 
-    // Autocomplete kode_barang (filter dari kode saja)
-    function showSuggestionsKode() {
-      const val = inputKode.value.trim().toLowerCase();
-      suggestKode.innerHTML = '';
-      if (!val) return;
-      const matched = [...barangMap.entries()]
-        .filter(([kode]) => kode.toLowerCase().includes(val))
-        .slice(0, 10);
-      matched.forEach(([kode, nama]) => {
-        const li = document.createElement('li');
-        li.textContent = kode;
-        li.title = nama;
-        li.addEventListener('click', () => {
-          inputKode.value = kode;
-          inputNama.value = nama;
-          suggestKode.innerHTML = '';
-          suggestNama.innerHTML = '';
-        });
-        suggestKode.appendChild(li);
-      });
-    }
-
-    // Autocomplete nama_barang (filter dari nama saja)
-    function showSuggestionsNama() {
-      const val = inputNama.value.trim().toLowerCase();
-      suggestNama.innerHTML = '';
-      if (!val) return;
-      const matched = [...barangMap.entries()]
-        .filter(([, nama]) => nama.toLowerCase().includes(val))
-        .slice(0, 10);
-      matched.forEach(([kode, nama]) => {
-        const li = document.createElement('li');
-        li.textContent = nama;
-        li.title = kode;
-        li.addEventListener('click', () => {
-          inputNama.value = nama;
-          inputKode.value = kode;
-          suggestNama.innerHTML = '';
-          suggestKode.innerHTML = '';
-        });
-        suggestNama.appendChild(li);
-      });
-    }
-
-    // Autocomplete buyer & satuan
-    function showSuggestionsBuyer() {
-      const val = inputBuyer.value.trim().toLowerCase();
-      suggestBuyer.innerHTML = '';
-      if (!val) return;
-      const matched = [...buyerSet].filter(item => item.toLowerCase().includes(val)).slice(0, 10);
-      matched.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        li.addEventListener('click', () => {
-          inputBuyer.value = item;
-          suggestBuyer.innerHTML = '';
-        });
-        suggestBuyer.appendChild(li);
-      });
-    }
-
-    function showSuggestionsSatuan() {
-      const val = inputSatuan.value.trim().toLowerCase();
-      suggestSatuan.innerHTML = '';
-      if (!val) return;
-      const matched = [...satuanSet].filter(item => item.toLowerCase().includes(val)).slice(0, 10);
-      matched.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        li.addEventListener('click', () => {
-          inputSatuan.value = item;
-          suggestSatuan.innerHTML = '';
-        });
-        suggestSatuan.appendChild(li);
-      });
-    }
-
-    inputKode.addEventListener('input', showSuggestionsKode);
-    inputNama.addEventListener('input', showSuggestionsNama);
-    inputBuyer.addEventListener('input', showSuggestionsBuyer);
-    inputSatuan.addEventListener('input', showSuggestionsSatuan);
-
-    document.addEventListener('click', (e) => {
-      if (!inputKode.contains(e.target)) suggestKode.innerHTML = '';
-      if (!inputNama.contains(e.target)) suggestNama.innerHTML = '';
-      if (!inputBuyer.contains(e.target)) suggestBuyer.innerHTML = '';
-      if (!inputSatuan.contains(e.target)) suggestSatuan.innerHTML = '';
-    });
-
-    // Hitung stok dari Firestore
-    const getTotalStok = async (kode_barang) => { 
-      const masukSnapshot = await db.collection('barangMasuk').where('kode_barang', '==', kode_barang).get();
-      const keluarSnapshot = await db.collection('barangKeluar').where('kode_barang', '==', kode_barang).get();
-
-      const totalMasuk = masukSnapshot.docs.reduce((sum, doc) => sum + Number(doc.data().jumlah), 0);
-      const totalKeluar = keluarSnapshot.docs.reduce((sum, doc) => sum + Number(doc.data().jumlah), 0);
-
-      return totalMasuk - totalKeluar;
-    };
-
-    // Simpan data ke Firebase & localStorage
-    const form = document.getElementById('formKeluar');
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(form).entries());
-      data.jumlah = Number(data.jumlah);
-
-      const stokTersedia = await getTotalStok(data.kode_barang);
-
-      if (data.jumlah > stokTersedia) {
-        alert(`Stok tidak cukup!\nStok tersedia: ${stokTersedia}\nJumlah keluar: ${data.jumlah}`);
-        return;
-      }
-
-      try {
-        await db.collection('barangKeluar').add({
-          ...data,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        const simpanan = JSON.parse(localStorage.getItem('dataKeluar')) || [];
-        simpanan.push(data);
-        localStorage.setItem('dataKeluar', JSON.stringify(simpanan));
-
-        alert('Data berhasil disimpan ke Firebase dan LocalStorage.');
-        form.reset();
-      } catch (err) {
-        console.error(err);
-        alert('Gagal menyimpan data. Coba lagi.');
-      }
-    });
-
-    // Kalkulator
-    function openCalculator() {
-      document.getElementById('calculatorPanel').classList.add('active');
-    }
-    function closeCalculator() {
-      document.getElementById('calculatorPanel').classList.remove('active');
-    }
-
-    const calculatorBody = document.getElementById('calculatorBody');
-    for (let r = 0; r < 5; r++) {
-      const tr = document.createElement('tr');
-      for (let c = 0; c < 4; c++) {
-        const td = document.createElement('td');
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.className = 'angka';
-        input.dataset.row = r;
-        input.dataset.col = c;
-        td.appendChild(input);
-        tr.appendChild(td);
-      }
-      calculatorBody.appendChild(tr);
-    }
-
-    const inputs = document.querySelectorAll('#calculatorPanel .angka');
-    const totalEl = document.getElementById('totalCalc');
-    const jumlahEl = document.getElementById('jumlahCalc');
-
-    function hitungOtomatis() {
-      let total = 0;
-      let count = 0;
-      inputs.forEach(input => {
-        const num = parseFloat(input.value);
-        if (!isNaN(num)) {
-          count++;
-          total += num;
+      [...dataMasuk, ...dataKeluar].forEach(item => {
+        if (item.kode_barang && item.nama_barang) {
+          barangMap.set(item.kode_barang, item.nama_barang);
         }
+        if (item.kode_buyer) buyerSet.add(item.kode_buyer);
+        if (item.satuan) satuanSet.add(item.satuan);
       });
-      jumlahEl.textContent = count;
-      totalEl.textContent = total.toFixed(2);
+
+      console.log('Autocomplete data updated from Firestore.');
+    } catch (err) {
+      console.error('Gagal ambil data Firestore:', err);
+      alert('Gagal mengambil data dari Firestore.');
+    }
+  }
+
+  loadDataFromFirestore();
+
+  // === ELEMENTS ===
+  const inputKode = document.getElementById('kode_barang');
+  const inputNama = document.getElementById('nama_barang');
+  const inputBuyer = document.getElementById('kode_buyer');
+  const inputSatuan = document.getElementById('satuan');
+
+  const suggestKode = document.getElementById('suggestionsKode');
+  const suggestNama = document.getElementById('suggestionsNama');
+  const suggestBuyer = document.getElementById('suggestionsBuyer');
+  const suggestSatuan = document.getElementById('suggestionsSatuan');
+
+  // === AUTOCOMPLETE FUNCTIONS ===
+  function showSuggestionsKode() {
+    const val = inputKode.value.trim().toLowerCase();
+    suggestKode.innerHTML = '';
+    if (!val) return;
+    const matched = [...barangMap.entries()]
+      .filter(([kode]) => kode.toLowerCase().includes(val))
+      .slice(0, 10);
+    matched.forEach(([kode, nama]) => {
+      const li = document.createElement('li');
+      li.textContent = kode;
+      li.title = nama;
+      li.addEventListener('click', () => {
+        inputKode.value = kode;
+        inputNama.value = nama;
+        suggestKode.innerHTML = '';
+        suggestNama.innerHTML = '';
+      });
+      suggestKode.appendChild(li);
+    });
+  }
+
+  function showSuggestionsNama() {
+    const val = inputNama.value.trim().toLowerCase();
+    suggestNama.innerHTML = '';
+    if (!val) return;
+    const matched = [...barangMap.entries()]
+      .filter(([, nama]) => nama.toLowerCase().includes(val))
+      .slice(0, 10);
+    matched.forEach(([kode, nama]) => {
+      const li = document.createElement('li');
+      li.textContent = nama;
+      li.title = kode;
+      li.addEventListener('click', () => {
+        inputNama.value = nama;
+        inputKode.value = kode;
+        suggestNama.innerHTML = '';
+        suggestKode.innerHTML = '';
+      });
+      suggestNama.appendChild(li);
+    });
+  }
+
+  function showSuggestionsBuyer() {
+    const val = inputBuyer.value.trim().toLowerCase();
+    suggestBuyer.innerHTML = '';
+    if (!val) return;
+    const matched = [...buyerSet].filter(item => item.toLowerCase().includes(val)).slice(0, 10);
+    matched.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      li.addEventListener('click', () => {
+        inputBuyer.value = item;
+        suggestBuyer.innerHTML = '';
+      });
+      suggestBuyer.appendChild(li);
+    });
+  }
+
+  function showSuggestionsSatuan() {
+    const val = inputSatuan.value.trim().toLowerCase();
+    suggestSatuan.innerHTML = '';
+    if (!val) return;
+    const matched = [...satuanSet].filter(item => item.toLowerCase().includes(val)).slice(0, 10);
+    matched.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      li.addEventListener('click', () => {
+        inputSatuan.value = item;
+        suggestSatuan.innerHTML = '';
+      });
+      suggestSatuan.appendChild(li);
+    });
+  }
+
+  inputKode.addEventListener('input', showSuggestionsKode);
+  inputNama.addEventListener('input', showSuggestionsNama);
+  inputBuyer.addEventListener('input', showSuggestionsBuyer);
+  inputSatuan.addEventListener('input', showSuggestionsSatuan);
+
+  document.addEventListener('click', (e) => {
+    if (!inputKode.contains(e.target)) suggestKode.innerHTML = '';
+    if (!inputNama.contains(e.target)) suggestNama.innerHTML = '';
+    if (!inputBuyer.contains(e.target)) suggestBuyer.innerHTML = '';
+    if (!inputSatuan.contains(e.target)) suggestSatuan.innerHTML = '';
+  });
+
+  // === HITUNG STOK FIRESTORE ===
+  const getTotalStok = async (kode_barang) => { 
+    const masukSnapshot = await db.collection('barangMasuk').where('kode_barang', '==', kode_barang).get();
+    const keluarSnapshot = await db.collection('barangKeluar').where('kode_barang', '==', kode_barang).get();
+    const totalMasuk = masukSnapshot.docs.reduce((sum, doc) => sum + Number(doc.data().jumlah), 0);
+    const totalKeluar = keluarSnapshot.docs.reduce((sum, doc) => sum + Number(doc.data().jumlah), 0);
+    return totalMasuk - totalKeluar;
+  };
+
+  // === SIMPAN KE FIRESTORE ===
+  const form = document.getElementById('formKeluar');
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.jumlah = Number(data.jumlah);
+    const stokTersedia = await getTotalStok(data.kode_barang);
+
+    if (data.jumlah > stokTersedia) {
+      alert(`Stok tidak cukup!\nStok tersedia: ${stokTersedia}\nJumlah keluar: ${data.jumlah}`);
+      return;
     }
 
+    try {
+      await db.collection('barangKeluar').add({
+        ...data,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      const simpanan = JSON.parse(localStorage.getItem('dataKeluar')) || [];
+      simpanan.push(data);
+      localStorage.setItem('dataKeluar', JSON.stringify(simpanan));
+      alert('Data berhasil disimpan ke Firebase dan LocalStorage.');
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      alert('Gagal menyimpan data.');
+    }
+  });
+
+  // === KALKULATOR ===
+  function openCalculator() {
+    document.getElementById('calculatorPanel').classList.add('active');
+  }
+  function closeCalculator() {
+    document.getElementById('calculatorPanel').classList.remove('active');
+  }
+
+  const calculatorBody = document.getElementById('calculatorBody');
+  for (let r = 0; r < 5; r++) {
+    const tr = document.createElement('tr');
+    for (let c = 0; c < 4; c++) {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'angka';
+      input.dataset.row = r;
+      input.dataset.col = c;
+      td.appendChild(input);
+      tr.appendChild(td);
+    }
+    calculatorBody.appendChild(tr);
+  }
+
+  const inputs = document.querySelectorAll('#calculatorPanel .angka');
+  inputs.forEach(input => input.addEventListener('input', hitungTotal));
+
+  function hitungTotal() {
+    let count = 0;
+    let sum = 0;
     inputs.forEach(input => {
-      input.addEventListener('input', hitungOtomatis);
-      input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          let r = parseInt(input.dataset.row);
-          let c = parseInt(input.dataset.col);
-          r++;
-          if (r > 4) {
-            r = 0;
-            c++;
-          }
-          if (c > 3) return;
-          const nextInput = document.querySelector(`.angka[data-row="${r}"][data-col="${c}"]`);
-          if (nextInput) nextInput.focus();
-        }
-      });
+      const val = Number(input.value);
+      if (!isNaN(val) && val !== 0) {
+        count++;
+        sum += val;
+      }
     });
-
-    // === Buka popup kalkulator otomatis saat klik kolom jumlah ===
-const jumlahInput = document.getElementById('jumlah');
-if (jumlahInput) {
-  jumlahInput.addEventListener('focus', openCalculator);
-}
-
-// === Hapus penutupan otomatis jika sebelumnya ada ===
-// (kalau sebelumnya ada event blur untuk closeCalculator, hapus atau nonaktifkan baris itu)
-
+    document.getElementById('jumlahCalc').textContent = count;
+    document.getElementById('totalCalc').textContent = sum;
+  }
   </script>
 </body>
 </html>
