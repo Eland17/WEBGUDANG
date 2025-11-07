@@ -73,7 +73,6 @@
   button.btn-back:hover { background: #565e64; }
   button:hover { background: #2c51d9; }
 
-  /* Kalkulator berada di sebelah kanan kolom Jumlah */
   .jumlah-container {
     position: relative;
     display: flex;
@@ -91,20 +90,13 @@
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     padding: 15px;
     z-index: 1000;
-    display: none; /* default sembunyi */
+    display: none;
   }
 
   #calculatorPanel h2 { margin-top: 0; text-align: center; color: #333; font-size: 1rem; }
-
   #calculatorPanel table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   #calculatorPanel th, #calculatorPanel td { border: 1px solid #ccc; padding: 4px; text-align: right; }
-
-  #calculatorPanel input {
-    width: 100%;
-    border: none;
-    text-align: right;
-    padding: 4px;
-  }
+  #calculatorPanel input { width: 100%; border: none; text-align: right; padding: 4px; }
 
   .result {
     margin-top: 10px; font-size: 14px; padding: 6px; background: #e6f5ea;
@@ -124,7 +116,7 @@
   }
   .close-btn:hover { color: #000; }
 
-  /* Tombol kalkulator untuk mobile */
+  /* Tombol kalkulator kecil untuk mobile */
   .btn-calc { display: none; }
   @media (max-width: 768px) {
     .btn-calc {
@@ -132,11 +124,12 @@
       background: #17a2b8;
       border: none;
       color: white;
-      font-size: 0.85rem;
-      padding: 0.3rem 0.6rem;
-      border-radius: 5px;
+      font-size: 0.75rem;   
+      padding: 0.2rem 0.4rem; 
+      border-radius: 4px;
       cursor: pointer;
       margin-left: 5px;
+      min-width: 40px; 
     }
     .btn-calc:hover { background: #138496; }
 
@@ -186,7 +179,6 @@
         <button type="button" class="btn-calc" id="toggleCalc">Calc</button>
       </div>
 
-      <!-- Kalkulator popup -->
       <div id="calculatorPanel">
         <button type="button" class="close-btn" id="closeCalc">✖</button>
         <h2>Kalkulator</h2>
@@ -208,7 +200,6 @@
     </div>
   </form>
 
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
@@ -225,7 +216,6 @@
   const db = firebase.firestore();
 
   let barangMap = new Map(), buyerSet = new Set(), satuanSet = new Set();
-
   async function loadDataFromFirestore() {
     const masukSnap = await db.collection("barangMasuk").get();
     const keluarSnap = await db.collection("barangKeluar").get();
@@ -311,7 +301,6 @@
   const inputJumlah = document.getElementById("jumlah");
   const toggleCalc = document.getElementById("toggleCalc");
 
-  // buat grid kalkulator
   for (let r = 0; r < 5; r++) {
     const tr = document.createElement("tr");
     for (let c = 0; c < 4; c++) {
@@ -335,14 +324,12 @@
 
   calculatorPanel.addEventListener("input", hitungOtomatis);
 
-  // Event tombol kalkulator (mobile)
   toggleCalc.addEventListener("click", () => {
     calculatorPanel.style.display = calculatorPanel.style.display === "none" ? "block" : "none";
   });
 
   closeCalc.addEventListener("click", () => { calculatorPanel.style.display = "none"; });
 
-  // Desktop: klik input jumlah
   inputJumlah.addEventListener("focus", () => {
     if (window.innerWidth > 768) calculatorPanel.style.display = "block";
   });
@@ -362,8 +349,6 @@
     alert("Data berhasil disimpan ke Firebase.");
     
     form.reset();
-
-    // Reset kalkulator
     inputs.forEach(i => i.value = "");
     jumlahEl.textContent = "0";
     totalEl.textContent = "0";
