@@ -40,12 +40,12 @@
   label { font-weight: 600; margin-bottom: 0.4rem; display: block; color: #222; font-size: 0.9rem; }
   .input-container { position: relative; margin-bottom: 1rem; }
 
-  input[type="text"], input[type="number"], input[type="date"] {
+  input[type="text"], input[type="number"], input[type="date"], select {
     width: 100%; padding: 0.6rem 0.8rem; border: 1.8px solid #a3bffa;
     border-radius: 6px; font-size: 0.9rem; color: #222;
   }
 
-  input:focus { border-color: #3b6dfc; outline: none; }
+  input:focus, select:focus { border-color: #3b6dfc; outline: none; }
 
   .suggestion-box {
     position: absolute; background: #fff; width: 100%; max-height: 150px;
@@ -105,15 +105,14 @@
   .result span { float: right; font-weight: bold; }
 
   .close-btn {
-  position: relative; /* ubah dari absolute */
-  top: 0;
-  right: 0;
-  float: right; /* biar tetap di kanan atas header */
-  margin-bottom: 10px;
-}
+    position: relative;
+    top: 0;
+    right: 0;
+    float: right;
+    margin-bottom: 10px;
+  }
   .close-btn:hover { color: #000; }
 
-  /* Tombol kalkulator kecil untuk mobile */
   .btn-calc { display: none; }
   @media (max-width: 738px) {
     .btn-calc {
@@ -133,24 +132,14 @@
     body { flex-direction: column; align-items: stretch; padding: 0.6rem; }
     form { padding: 0.8rem; max-width: 95%; margin: 0 auto; border-radius: 8px; }
     h2 { font-size: 1rem; margin-bottom: 1rem; }
-    input { font-size: 0.85rem; padding: 0.5rem 0.6rem; }
+    input, select { font-size: 0.85rem; padding: 0.5rem 0.6rem; }
     .btn-container { flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
     button { width: 100%; font-size: 0.85rem; padding: 0.5rem; }
     #calculatorPanel { position: static; width: 100%; margin-top: 1rem; right: auto; }
     .jumlah-container { flex-direction: column; }
-
-    .jumlah-container > div {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .jumlah-container label {
-      display: block;
-      margin-bottom: 0.3rem;
-      width: 100%;
-    }
-    .jumlah-container input {
-      width: 100%;  /* full lebar input */
-    }
+    .jumlah-container > div { flex-direction: column; align-items: stretch; }
+    .jumlah-container label { display: block; margin-bottom: 0.3rem; width: 100%; }
+    .jumlah-container input { width: 100%; }
   }
   </style>
 </head>
@@ -179,35 +168,38 @@
 
     <div class="input-container">
       <label for="satuan">Satuan</label>
-      <input type="text" id="satuan" name="satuan" placeholder="Contoh: pcs, kg, lusin" autocomplete="off" />
-      <ul id="suggestionsSatuan" class="suggestion-box"></ul>
+      <select id="satuan" name="satuan" required>
+        <option value="">-- Pilih Satuan --</option>
+        <option value="PCS">PCS</option>
+        <option value="ROLL">ROLL</option>
+        <option value="METER">METER</option>
+        <option value="YARD">YARD</option>
+        <option value="KG">KG</option>
+      </select>
     </div>
 
-   <div class="jumlah-container">
-  <div style="flex:1; display:flex; flex-direction: column;">
-    <label for="jumlah">Jumlah</label>
-    <div style="display:flex; align-items:center; gap:5px;">
-      <!-- Input Jumlah lebih panjang -->
-      <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:4;" />
+    <div class="jumlah-container">
+      <div style="flex:1; display:flex; flex-direction: column;">
+        <label for="jumlah">Jumlah</label>
+        <div style="display:flex; align-items:center; gap:5px;">
+          <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:4;" />
+          <button type="button" class="btn-calc" id="toggleCalc" style="flex:1; max-width:50px;">Calc</button>
+        </div>
+      </div>
 
-      <!-- Tombol Calc kecil -->
-      <button type="button" class="btn-calc" id="toggleCalc" style="flex:1; max-width:50px;">Calc</button>
+      <div id="calculatorPanel">
+        <button type="button" class="close-btn" id="closeCalc">✖</button>
+        <h2>Kalkulator</h2>
+        <table><tbody id="calculatorBody"></tbody></table>
+        <div class="result">COUNT : <span id="jumlahCalc">0</span></div>
+        <div class="result">SUM   : <span id="totalCalc">0</span></div>
+      </div>
     </div>
-  </div>
 
-  <!-- Kalkulator popup -->
-  <div id="calculatorPanel">
-    <button type="button" class="close-btn" id="closeCalc">✖</button>
-    <h2>Kalkulator</h2>
-    <table><tbody id="calculatorBody"></tbody></table>
-    <div class="result">COUNT : <span id="jumlahCalc">0</span></div>
-    <div class="result">SUM   : <span id="totalCalc">0</span></div>
-  </div>
-</div>
-
-
-    <label for="keterangan">Keterangan</label>
-    <input type="text" id="keterangan" name="keterangan" />
+    <div class="input-container">
+      <label for="keterangan">Keterangan</label>
+      <input type="text" id="keterangan" name="keterangan" />
+    </div>
 
     <label for="tanggal">Tanggal Keluar</label>
     <input type="date" id="tanggal" name="tanggal" required />
@@ -233,16 +225,18 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  let barangMap = new Map(), buyerSet = new Set(), satuanSet = new Set();
+  let barangMap = new Map(), buyerSet = new Set(), keteranganSet = new Set();
+
   async function loadDataFromFirestore() {
     const masukSnap = await db.collection("barangMasuk").get();
     const keluarSnap = await db.collection("barangKeluar").get();
     const semua = [...masukSnap.docs, ...keluarSnap.docs];
+
     semua.forEach(doc => {
       const d = doc.data();
       if (d.kode_barang && d.nama_barang) barangMap.set(d.kode_barang, d.nama_barang);
       if (d.kode_buyer) buyerSet.add(d.kode_buyer);
-      if (d.satuan) satuanSet.add(d.satuan);
+      if (d.keterangan) keteranganSet.add(d.keterangan);
     });
   }
   loadDataFromFirestore();
@@ -250,12 +244,15 @@
   const inputKode = document.getElementById("kode_barang"),
         inputNama = document.getElementById("nama_barang"),
         inputBuyer = document.getElementById("kode_buyer"),
-        inputSatuan = document.getElementById("satuan");
+        inputKeterangan = document.getElementById("keterangan");
 
   const suggestKode = document.getElementById("suggestionsKode"),
         suggestNama = document.getElementById("suggestionsNama"),
-        suggestBuyer = document.getElementById("suggestionsBuyer"),
-        suggestSatuan = document.getElementById("suggestionsSatuan");
+        suggestBuyer = document.getElementById("suggestionsBuyer");
+
+  const suggestKeterangan = document.createElement("ul");
+  suggestKeterangan.className = "suggestion-box";
+  inputKeterangan.parentNode.appendChild(suggestKeterangan);
 
   function showSuggestions(el, list, data) {
     const val = el.value.trim().toLowerCase();
@@ -296,11 +293,11 @@
   });
 
   inputBuyer.addEventListener("input", () => showSuggestions(inputBuyer, suggestBuyer, buyerSet));
-  inputSatuan.addEventListener("input", () => showSuggestions(inputSatuan, suggestSatuan, satuanSet));
+  inputKeterangan.addEventListener("input", () => showSuggestions(inputKeterangan, suggestKeterangan, keteranganSet));
 
   document.addEventListener("click", e => {
     if (!e.target.closest(".input-container")) {
-      suggestKode.innerHTML = ''; suggestNama.innerHTML = ''; suggestBuyer.innerHTML = ''; suggestSatuan.innerHTML = '';
+      suggestKode.innerHTML = ''; suggestNama.innerHTML = ''; suggestBuyer.innerHTML = ''; suggestKeterangan.innerHTML = '';
     }
   });
 
@@ -375,5 +372,3 @@
   </script>
 </body>
 </html>
-
-
