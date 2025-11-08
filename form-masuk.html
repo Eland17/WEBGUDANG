@@ -37,11 +37,11 @@ form {
 label { font-weight: 600; margin-bottom: 0.4rem; display: block; color: #222; font-size: 0.9rem; }
 .input-container { position: relative; margin-bottom: 1rem; }
 
-input[type="text"], input[type="number"], input[type="date"] {
+input[type="text"], input[type="number"], input[type="date"], select {
   width: 100%; padding: 0.6rem 0.8rem; border: 1.8px solid #a3bffa;
   border-radius: 6px; font-size: 0.9rem; color: #222;
 }
-input:focus { border-color: #3b6dfc; outline: none; }
+input:focus, select:focus { border-color: #3b6dfc; outline: none; }
 
 .suggestion-box {
   position: absolute; background: #fff; width: 100%; max-height: 150px;
@@ -129,8 +129,14 @@ button:hover { background: #2c51d9; }
 
   <div class="input-container">
     <label for="satuan">Satuan</label>
-    <input type="text" id="satuan" name="satuan" placeholder="Contoh: pcs, kg, lusin" autocomplete="off" />
-    <ul id="suggestionsSatuan" class="suggestion-box"></ul>
+    <select id="satuan" name="satuan" required>
+      <option value="">-- Pilih Satuan --</option>
+      <option value="PCS">PCS</option>
+      <option value="ROLL">ROLL</option>
+      <option value="METER">METER</option>
+      <option value="YARD">YARD</option>
+      <option value="KG">KG</option>
+    </select>
   </div>
 
   <div class="jumlah-container">
@@ -177,7 +183,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let barangMap = new Map(), buyerSet = new Set(), satuanSet = new Set();
+let barangMap = new Map(), buyerSet = new Set();
 async function loadDataFromFirestore() {
   const masukSnap = await db.collection("barangMasuk").get();
   const keluarSnap = await db.collection("barangKeluar").get();
@@ -186,20 +192,17 @@ async function loadDataFromFirestore() {
     const d = doc.data();
     if (d.kode_barang && d.nama_barang) barangMap.set(d.kode_barang, d.nama_barang);
     if (d.kode_buyer) buyerSet.add(d.kode_buyer);
-    if (d.satuan) satuanSet.add(d.satuan);
   });
 }
 loadDataFromFirestore();
 
 const inputKode = document.getElementById("kode_barang"),
       inputNama = document.getElementById("nama_barang"),
-      inputBuyer = document.getElementById("kode_buyer"),
-      inputSatuan = document.getElementById("satuan");
+      inputBuyer = document.getElementById("kode_buyer");
 
 const suggestKode = document.getElementById("suggestionsKode"),
       suggestNama = document.getElementById("suggestionsNama"),
-      suggestBuyer = document.getElementById("suggestionsBuyer"),
-      suggestSatuan = document.getElementById("suggestionsSatuan");
+      suggestBuyer = document.getElementById("suggestionsBuyer");
 
 function showSuggestions(el, list, data) {
   const val = el.value.trim().toLowerCase();
@@ -240,11 +243,10 @@ inputNama.addEventListener("input", () => {
 });
 
 inputBuyer.addEventListener("input", () => showSuggestions(inputBuyer, suggestBuyer, buyerSet));
-inputSatuan.addEventListener("input", () => showSuggestions(inputSatuan, suggestSatuan, satuanSet));
 
 document.addEventListener("click", e => {
   if (!e.target.closest(".input-container")) {
-    suggestKode.innerHTML = ''; suggestNama.innerHTML = ''; suggestBuyer.innerHTML = ''; suggestSatuan.innerHTML = '';
+    suggestKode.innerHTML = ''; suggestNama.innerHTML = ''; suggestBuyer.innerHTML = '';
   }
 });
 
@@ -296,5 +298,3 @@ form.addEventListener("submit", async e => {
 </script>
 </body>
 </html>
-
-
