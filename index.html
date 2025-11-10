@@ -2,37 +2,20 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inventory Gudang</title>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<!-- SheetJS (Export Excel) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
-/* Definisikan font Avenir dari file lokal */
-@font-face {
-  font-family: 'Avenir';
-  src: url('avenir-next-regular.woff2') format('woff2'); /* Ganti dengan nama file font Anda */
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Avenir';
-  src: url('avenir-next-bold.woff2') format('woff2'); /* Ganti dengan nama file font Anda */
-  font-weight: bold;
-  font-style: normal;
-}
-
 * { box-sizing: border-box; }
-/* Ubah font-family di sini */
-body, html { margin:0; padding:0; font-family: 'Avenir', sans-serif; height:100vh; display:flex; flex-direction:column; }
+body, html { margin:0; padding:0; font-family: Arial,sans-serif; height:100vh; display:flex; flex-direction:column; }
 .wrapper { min-height:100vh; display:flex; flex-direction:column; flex-grow:1; }
 header { background:#1e90ff; color:white; text-align:center; padding:0; height:120px; line-height:120px; font-size:32px; font-weight:bold; user-select:none; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
 .main-content { display:flex; flex:1; overflow:hidden; min-height:0; }
@@ -40,67 +23,43 @@ header { background:#1e90ff; color:white; text-align:center; padding:0; height:1
 .sidebar a, .sidebar button { background:#444; color:white; text-decoration:none; border:none; padding:12px 15px; margin-bottom:10px; border-radius:5px; text-align:left; cursor:pointer; font-size:16px; transition:0.3s; }
 .sidebar a:hover, .sidebar button:hover { background:#1e90ff; }
 .content { flex:1; padding:20px; overflow-y:auto; display:flex; flex-direction:column; min-height:0; overflow-x:auto; }
-.filters { margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; }
+.filters { margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 .filters input[type="text"], .filters input[type="date"] { padding:7px 10px; border-radius:4px; border:1px solid #ccc; flex:1 1 150px; font-size:14px; }
+#btnExportExcel { background:#28a745; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; transition:0.3s; }
+#btnExportExcel:hover { background:#218838; }
 table { width:100%; min-width:700px; border-collapse:collapse; background:#fff; box-shadow:0 0 5px rgba(0,0,0,0.1); }
 th, td { border:1px solid rgba(0,0,0,0.3); padding:8px; text-align:center; }
 th { background:#1e90ff; color:white; user-select:none; cursor:pointer; }
 tr:nth-child(even){ background:#f9f9f9; }
 tr:hover{ background:#d0e7ff; }
 td.nama-barang { text-align:left; padding-left:8px; }
-td.angka-kanan { text-align:right; padding-right:10px; font-size:16px; }
-
-/* Tambahan CSS untuk pewarnaan stok pada sel */
-td.stok-habis-cell { background-color: #f8d7da; }
-td.stok-rendah-cell { background-color: #fff3cd; }
-
-/* Tambahan untuk pewarnaan saldo di kartu stok */
-td.saldo-nol { background-color: #f8d7da; }
-td.saldo-rendah { background-color: #fff3cd; }
-
-
+td.angka-kanan { text-align:right; font-family:monospace; padding-right:10px; font-size:16px; }
+td.saldo-nol { background:#f8d7da; }
+td.saldo-rendah { background:#fff3cd; }
 .pagination { margin-top:auto; text-align:center; padding-bottom:10px; }
 .pagination button { margin:0.3rem; padding:0.5rem 1rem; cursor:pointer; border:none; background:#1e90ff; color:white; border-radius:4px; transition:0.3s; }
 .pagination button:disabled { background:#ccc; cursor:default; }
 .marquee-info { background:#f2f2f2; padding:8px 16px; font-weight:bold; color:#333; white-space:nowrap; overflow:hidden; border:1px solid #ccc; border-radius:4px; user-select:none; margin-top:10px; flex-shrink:0; }
 footer { background:#007bff; color:white; text-align:center; padding:10px 0; flex-shrink:0; }
 
-/* Modal */
-#modalKartuStok, #modalStokOpname, #modalGrafik { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; }
-.modal-content { background:#fff; padding:20px; border-radius:8px; width:95%; max-width:1100px; max-height:90vh; overflow:auto; }
-#modalKartuStok table, #modalStokOpname table { width:100%; border-collapse:collapse; margin-top:10px; min-width:700px; }
-#modalKartuStok th, #modalKartuStok td, #modalStokOpname th, #modalStokOpname td { border:1px solid #333; padding:6px; text-align:center; }
-#modalKartuStok th, #modalKartuStok th { background:#1e90ff; color:white; }
-#modalKartuStok .angka-kanan.nol-value {
-  padding-right: 0;
+/* Modal kartu stok */
+#modalKartuStok { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; }
+#modalKartuStok .modal-content { background:#fff; padding:20px; border-radius:8px; width:95%; max-width:1000px; max-height:90vh; overflow:auto; }
+#modalKartuStok table { width:100%; border-collapse:collapse; margin-top:10px; table-layout:auto; min-width:700px; font-family:monospace; }
+#modalKartuStok th, #modalKartuStok td { border:1px solid #333; padding:6px; text-align:center; }
+#modalKartuStok th { background:#1e90ff; color:white; }
+
+@media(max-width:768px){ 
+  .main-content{flex-direction:column;} 
+  .sidebar{width:100%; flex-direction:row; flex-wrap:wrap; justify-content:center; gap:10px;} 
+  .sidebar a,.sidebar button{flex:1 1 40%; margin:5px; text-align:center;} 
+  .filters{flex-direction:column;} 
+  .filters input{flex:1 1 100%;} 
+  .marquee-info{font-size:14px;} 
 }
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .sidebar {
-        width: 200px;          /* sesuaikan lebar sidebar di mobile */
-        left: -200px;           /* sembunyikan default */
-        transition: left 0.3s;
-    }
-    .sidebar.active { left: 0; } /* muncul saat toggle */
-    .hamburger {
-        display: block;
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        font-size: 24px;
-        z-index: 1001;
-        cursor: pointer;
-        color: #333; /* warna hamburger sama seperti teks header */
-    }
-    .main { margin-left: 0; }      /* hilangkan margin untuk mobile */
-    table { font-size: 12px; display:block; overflow-x:auto; } /* scroll tabel */
-    table th, table td { padding:6px; } /* tabel lebih rapat di mobile */
-}
-.hamburger { display:none; } /* sembunyikan hamburger di desktop */
 </style>
 </head>
 <body>
-<div class="hamburger">&#9776;</div>
 <div class="wrapper">
   <header>Inventory Gudang</header>
   <div class="main-content">
@@ -108,16 +67,29 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
       <a href="form-masuk.html">Barang Masuk</a>
       <a href="form-keluar.html">Barang Keluar</a>
       <a href="mutasi.html">Mutasi Barang</a>
-      <a href="#" id="btnStokOpname">Laporan Stok Opname</a>
-      <a href="#" id="btnGrafik">Grafik Mutasi Tahunan</a>
+      <a href="laporan-stok-opname.html">Laporan Stok Opname</a>
+      <a href="fsnm.html">FSNM Report</a>
+      <a href="grafik.html">Grafik</a>
       <button id="btnLogout" style="background:#d9534f;">Logout</button>
     </nav>
 
     <main class="content" id="mainContent">
+      <div id="autoRefreshIndicator" style="
+ 	 position:absolute; 
+  	 top:10px; 
+  	 right:20px; 
+   	 width:12px; 
+  	 height:12px; 
+  	 border-radius:50%; 
+ 	 background:#ccc; 
+  	 box-shadow:0 0 5px rgba(0,0,0,0.2);">
+      </div>
+
       <div class="filters">
         <input type="text" id="filterKodeBarang" placeholder="Kode Barang" />
         <input type="text" id="filterKodeBuyer" placeholder="Kode Buyer" />
         <input type="text" id="filterNamaBarang" placeholder="Nama Barang" />
+        <button id="btnExportExcel">Export Excel</button>
       </div>
 
       <div style="overflow-x:auto;">
@@ -128,7 +100,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
               <th>Kode Buyer</th>
               <th>Nama Barang</th>
               <th>Satuan</th>
-              <th>Stok</th>
+              <th>Stok Tersisa</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -150,99 +122,34 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   <footer>Copyright © 2025 Eland</footer>
 </div>
 
+<!-- Modal Kartu Stok -->
 <div id="modalKartuStok">
   <div class="modal-content">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
       <h3 id="judulKartuStok">Kartu Stok</h3>
       <span style="cursor:pointer; font-size:28px; font-weight:bold;" id="closeModal">&times;</span>
     </div>
+
     <div style="margin:10px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
       <label>Dari: <input type="date" id="filterTanggalDariModal"></label>
       <label>Sampai: <input type="date" id="filterTanggalSampaiModal"></label>
       <button id="btnPrintKartu" style="background:#28a745; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Print</button>
-      </div>
+    </div>
+
     <div style="overflow-x:auto; max-height:70vh;">
       <table>
         <thead>
           <tr>
-            <th>Tanggal</th>
-            <th>Kode Buyer</th>
-            <th>Masuk</th>
-            <th>Keluar</th>
-            <th>Saldo</th>
-            <th>Keterangan</th>
+            <th style="width:12%;">Tanggal</th>
+            <th style="width:15%;">Kode Buyer</th>
+            <th style="width:10%;">Masuk</th>
+            <th style="width:10%;">Keluar</th>
+            <th style="width:12%;">Saldo</th>
+            <th style="width:41%;">Keterangan</th>
           </tr>
         </thead>
         <tbody id="tbodyKartuStok"></tbody>
       </table>
-    </div>
-  </div>
-</div>
-
-<div id="modalStokOpname">
-  <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <h3>Laporan Stok Opname</h3>
-      <span style="cursor:pointer; font-size:28px; font-weight:bold;" id="closeModalOpname">&times;</span>
-    </div>
-    <div style="margin:10px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <label style="flex:1 1 100%;">Keterangan Umum:<br>
-        <textarea id="keteranganUmum" style="width:100%; min-height:60px; padding:6px; border-radius:4px; border:1px solid #ccc; font-family:inherit;"></textarea>
-      </label>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <label>Kode Barang:
-          <input type="text" id="filterKodeOpname" placeholder="Ketik Kode..." style="padding:6px; border-radius:4px; border:1px solid #ccc; width:150px;">
-        </label>
-        <label>Nama Barang:
-          <input type="text" id="filterNamaOpname" placeholder="Ketik Nama..." style="padding:6px; border-radius:4px; border:1px solid #ccc; width:200px;">
-        </label>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button id="btnExportOpnamePDF" style="background:#28a745; color:white; padding:6px 10px; border:none; border-radius:4px; cursor:pointer;">Export PDF</button>
-        <button id="btnExportOpnameExcel" style="background:#007bff; color:white; padding:6px 10px; border:none; border-radius:4px; cursor:pointer;">Export Excel</button>
-        <button id="btnSimpanOpname" style="background:#ffc107; color:white; padding:6px 10px; border:none; border-radius:4px; cursor:pointer;">Simpan Penyesuaian</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto; max-height:70vh;">
-      <table id="tabelOpname">
-        <thead>
-          <tr>
-            <th>Kode Barang</th>
-            <th>Kode Buyer</th>
-            <th>Nama Barang</th>
-            <th>Satuan</th>
-            <th>Stok Sistem</th>
-            <th>Stok Fisik</th>
-            <th>Selisih</th>
-            <th>Keterangan</th>
-          </tr>
-        </thead>
-        <tbody id="tbodyOpname"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div id="modalPassword" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:center;">
-    <div style="background:#fff; padding:20px; border-radius:8px; width:90%; max-width:400px; text-align:center;">
-      <h4 id="passwordModalTitle"></h4>
-      <p>Masukkan password untuk melanjutkan.</p>
-      <input type="password" id="passwordInput" placeholder="Password" style="width:100%; padding:8px; margin-bottom:10px; border-radius:4px; border:1px solid #ccc;">
-      <div style="display:flex; justify-content:space-around; gap:10px;">
-        <button id="btnSubmitPassword" style="flex:1; padding:10px; background:#1e90ff; color:white; border:none; border-radius:5px; cursor:pointer;">Lanjutkan</button>
-        <button id="btnCancelPassword" style="flex:1; padding:10px; background:#d9534f; color:white; border:none; border-radius:5px; cursor:pointer;">Batal</button>
-      </div>
-    </div>
-</div>
-
-<div id="modalGrafik">
-  <div class="modal-content" style="max-width:800px; max-height:80vh;">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-      <h3>Grafik Mutasi Tahunan (12 Bulan Terakhir)</h3>
-      <span style="cursor:pointer; font-size:28px; font-weight:bold;" id="closeModalGrafik">&times;</span>
-    </div>
-    <div style="margin-top:10px; height: 500px;">
-      <canvas id="mutasiChart"></canvas>
     </div>
   </div>
 </div>
@@ -265,7 +172,7 @@ const db = firebase.firestore();
 auth.onAuthStateChanged(user=>{if(!user) window.location.href='login.html';});
 document.getElementById('btnLogout').addEventListener('click', ()=>{auth.signOut().then(()=>window.location.href='login.html');});
 
-// === Modal Kartu Stok ===
+// Modal Kartu Stok
 const modalKartu=document.getElementById("modalKartuStok");
 const tbodyKartuStok=document.getElementById("tbodyKartuStok");
 const judulKartuStok=document.getElementById("judulKartuStok");
@@ -293,109 +200,52 @@ async function bukaKartuStok(kodeBarang,namaBarang){
 function renderKartuStok(){
   const dari=document.getElementById("filterTanggalDariModal").value;
   const sampai=document.getElementById("filterTanggalSampaiModal").value;
-  
-  // Filter data terlebih dahulu
-  let filtered = kartuStokData.filter(row => {
-    const isWithinDateRange = (!dari || new Date(row.tanggal) >= new Date(dari)) &&
-                              (!sampai || new Date(row.tanggal) <= new Date(sampai));
-    const hasMovement = row.masuk > 0 || row.keluar > 0;
-    return isWithinDateRange && hasMovement;
+  let filtered=kartuStokData.filter(row=>{
+    const tgl=new Date(row.tanggal);
+    let valid=true;
+    if(dari) valid=valid&&tgl>=new Date(dari);
+    if(sampai) valid=valid&&tgl<=new Date(sampai);
+    return valid;
   });
-
-  let saldo = 0;
-  tbodyKartuStok.innerHTML = "";
-  
-  if (filtered.length === 0) {
-    tbodyKartuStok.innerHTML = "<tr><td colspan='6'>Tidak ada data mutasi.</td></tr>";
-    return;
-  }
-  
+  let saldo=0;
+  tbodyKartuStok.innerHTML="";
   filtered.forEach(row=>{
-    saldo += row.masuk - row.keluar;
-    let saldoClass = "";
-    if(saldo === 0) {
-      saldoClass = "saldo-nol";
-    } else if (saldo <= 5) {
-      saldoClass = "saldo-rendah";
-    }
-    
-    // Perbaikan: pastikan penempatan class angka-kanan hanya jika ada nilai
-    let masukClass = row.masuk > 0 ? "angka-kanan" : "angka-kanan nol-value";
-    let keluarClass = row.keluar > 0 ? "angka-kanan" : "angka-kanan nol-value";
-    
-    tbodyKartuStok.innerHTML += `<tr>
+    saldo+=row.masuk-row.keluar;
+    let saldoClass="";
+    if(saldo===0) saldoClass="saldo-nol";
+    else if(saldo<=5) saldoClass="saldo-rendah";
+    tbodyKartuStok.innerHTML+=`<tr>
       <td>${row.tanggal}</td>
       <td>${row.kode_buyer}</td>
-      <td class="${masukClass}">${row.masuk > 0 ? row.masuk.toLocaleString("id-ID") : ""}</td>
-      <td class="${keluarClass}">${row.keluar > 0 ? row.keluar.toLocaleString("id-ID") : ""}</td>
+      <td class="angka-kanan">${row.masuk?row.masuk.toLocaleString("id-ID"):""}</td>
+      <td class="angka-kanan">${row.keluar?row.keluar.toLocaleString("id-ID"):""}</td>
       <td class="angka-kanan ${saldoClass}">${saldo.toLocaleString("id-ID")}</td>
       <td>${row.keterangan}</td>
     </tr>`;
   });
+  if(filtered.length===0) tbodyKartuStok.innerHTML="<tr><td colspan='6'>Tidak ada data mutasi.</td></tr>";
 }
 
 document.getElementById("filterTanggalDariModal").addEventListener("change", renderKartuStok);
 document.getElementById("filterTanggalSampaiModal").addEventListener("change", renderKartuStok);
 
-document.getElementById("btnPrintKartu").addEventListener("click", () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF("landscape");
+document.getElementById("btnPrintKartu").addEventListener("click",()=>{
   const judul = document.getElementById("judulKartuStok").textContent;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text(judul, 14, 15);
-  
-  const dari = document.getElementById("filterTanggalDariModal").value;
-  const sampai = document.getElementById("filterTanggalSampaiModal").value;
-  
-  // Filter data untuk PDF
-  let filtered = kartuStokData.filter(row => {
-    const isWithinDateRange = (!dari || new Date(row.tanggal) >= new Date(dari)) &&
-                              (!sampai || new Date(row.tanggal) <= new Date(sampai));
-    const hasMovement = row.masuk > 0 || row.keluar > 0;
-    return isWithinDateRange && hasMovement;
-  });
-  
-  let saldo = 0;
-  const pdfBodyData = [];
-  
-  filtered.forEach(row => {
-    saldo += row.masuk - row.keluar;
-    pdfBodyData.push([
-      row.tanggal,
-      row.kode_buyer,
-      row.masuk > 0 ? row.masuk.toLocaleString("id-ID") : "",
-      row.keluar > 0 ? row.keluar.toLocaleString("id-ID") : "",
-      saldo,
-      row.keterangan
-    ]);
-  });
-
-  doc.autoTable({  
-    head: [['Tanggal', 'Kode Buyer', 'Masuk', 'Keluar', 'Saldo', 'Keterangan']],
-    body: pdfBodyData,
-    startY: 25,  
-    theme: "grid",  
-    headStyles: { fillColor: [30, 144, 255], textColor: 255, halign: "center" },  
-    styles: { font: "courier", fontSize: 10 },
-    columnStyles: {
-      0: { halign: 'center' },
-      1: { halign: 'center' },
-      2: { halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'right' }
-    },
-    didDrawCell: data => {
-      // Perbaikan: Lebih andal dengan memodifikasi gaya sel secara langsung
-      if (data.column.index === 4 && data.cell.raw === 0) {
-        data.cell.styles.fillColor = [248, 215, 218];
-      }
-    }
-  });
-  doc.save(judul + ".pdf");
+  const tableHTML = document.querySelector("#modalKartuStok table").outerHTML;
+  const w = window.open("", "_blank");
+  w.document.write(`<html><head><title>${judul}</title><style>
+    body{font-family:monospace;padding:20px;}
+    table{border-collapse:collapse;width:100%;}
+    th,td{border:1px solid #333;padding:6px;text-align:center;}
+    th{background:#1e90ff;color:white;}
+    .saldo-nol{background:#f8d7da;}
+    .saldo-rendah{background:#fff3cd;}
+  </style></head><body>${tableHTML}</body></html>`);
+  w.document.close();
+  w.print();
 });
 
-// === Inventory utama ===
+// Inventory
 let inventoryData=[];
 let currentPage=1;
 const rowsPerPage=20;
@@ -404,19 +254,38 @@ async function loadInventory(){
   const masukSnap = await db.collection("barangMasuk").get();
   const keluarSnap = await db.collection("barangKeluar").get();
   let tempData = {};
+  
   masukSnap.forEach(doc => {
     const d = doc.data();
     if(!tempData[d.kode_barang]) tempData[d.kode_barang] = {kode_barang:d.kode_barang, kode_buyer:d.kode_buyer||"", nama_barang:d.nama_barang||"", satuan:d.satuan||"", masuk:0, keluar:0, stok:0};
     tempData[d.kode_barang].masuk += d.jumlah||0;
   });
+
   keluarSnap.forEach(doc => {
     const d = doc.data();
     if(!tempData[d.kode_barang]) tempData[d.kode_barang] = {kode_barang:d.kode_barang, kode_buyer:d.kode_buyer||"", nama_barang:d.nama_barang||"", satuan:d.satuan||"", masuk:0, keluar:0, stok:0};
     tempData[d.kode_barang].keluar += d.jumlah||0;
   });
-  inventoryData = Object.values(tempData).map(row => ({...row, stok:(row.masuk||0)-(row.keluar||0)})).sort((a,b) => a.kode_barang.localeCompare(b.kode_barang));
+
+  inventoryData = Object.values(tempData)
+    .map(row => ({...row, stok:(row.masuk||0)-(row.keluar||0)}))
+    .sort((a,b) => a.kode_barang.localeCompare(b.kode_barang)); // urut A-Z
+
   renderInventory();
 }
+
+// 🔹 Export Excel
+document.getElementById("btnExportExcel").addEventListener("click", ()=>{
+  if(inventoryData.length===0){ alert("Data belum tersedia."); return; }
+  const ws_data = [["Kode Barang","Kode Buyer","Nama Barang","Satuan","Stok Tersisa"]];
+  inventoryData.forEach(row=>{
+    ws_data.push([row.kode_barang,row.kode_buyer,row.nama_barang,row.satuan,row.stok]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+  XLSX.writeFile(wb, "Inventory_Gudang.xlsx");
+});
 
 function renderInventory(){
   const tbody=document.querySelector("#tabelInventory tbody");
@@ -426,514 +295,50 @@ function renderInventory(){
     const nama=document.getElementById("filterNamaBarang").value.toLowerCase();
     return row.kode_barang.toLowerCase().includes(kode) && row.kode_buyer.toLowerCase().includes(buyer) && row.nama_barang.toLowerCase().includes(nama);
   });
+
   const totalPages=Math.ceil(filtered.length/rowsPerPage);
   if(currentPage>totalPages) currentPage=totalPages||1;
   const start=(currentPage-1)*rowsPerPage;
   const end=start+rowsPerPage;
-  let pageData=filtered.slice(start,end);
+  const pageData=filtered.slice(start,end);
+
   tbody.innerHTML="";
   pageData.forEach(row=>{
-    let cellClass = "";
-    if(row.stok === 0) {
-      cellClass = "stok-habis-cell";
-    } else if (row.stok > 0 && row.stok <= 5) {
-      cellClass = "stok-rendah-cell";
-    }
-
-    tbody.innerHTML+=`
-      <tr>
-        <td>${row.kode_barang}</td>
-        <td>${row.kode_buyer}</td>
-        <td class="nama-barang">${row.nama_barang}</td>
-        <td>${row.satuan}</td>
-        <td class="angka-kanan ${cellClass}">${row.stok.toLocaleString("id-ID")}</td>
-        <td><button onclick="bukaKartuStok('${row.kode_barang}','${row.nama_barang}')">Kartu Stok</button></td>
-      </tr>
-    `;
+    let stokClass="";
+    if(row.stok===0) stokClass="saldo-nol";
+    else if(row.stok<=5) stokClass="saldo-rendah";
+    tbody.innerHTML+=`<tr>
+      <td>${row.kode_barang}</td>
+      <td>${row.kode_buyer}</td>
+      <td class="nama-barang">${row.nama_barang}</td>
+      <td>${row.satuan}</td>
+      <td class="angka-kanan ${stokClass}">${row.stok.toLocaleString("id-ID")}</td>
+      <td><button onclick="bukaKartuStok('${row.kode_barang}','${row.nama_barang}')">Kartu Stok</button></td>
+    </tr>`;
   });
-  document.getElementById("pageInfo").textContent=`Halaman ${currentPage} dari ${totalPages||1}`;
-  document.getElementById("prevPage").disabled=currentPage===1;
-  document.getElementById("nextPage").disabled=currentPage===totalPages||totalPages===0;
+
+  document.getElementById("pageInfo").textContent=`${currentPage} / ${totalPages||1}`;
 }
+
+// Pagination & Filter
 document.getElementById("prevPage").addEventListener("click",()=>{if(currentPage>1){currentPage--; renderInventory();}});
 document.getElementById("nextPage").addEventListener("click",()=>{currentPage++; renderInventory();});
-["filterKodeBarang","filterKodeBuyer","filterNamaBarang"].forEach(id=>{document.getElementById(id).addEventListener("input",()=>{currentPage=1; renderInventory();});});
-window.onload=loadInventory;
+document.getElementById("filterKodeBarang").addEventListener("input",()=>{currentPage=1; renderInventory();});
+document.getElementById("filterKodeBuyer").addEventListener("input",()=>{currentPage=1; renderInventory();});
+document.getElementById("filterNamaBarang").addEventListener("input",()=>{currentPage=1; renderInventory();});
 
-// === STOK OPNAME ===
-const modalOpname=document.getElementById("modalStokOpname");
-const tbodyOpname=document.getElementById("tbodyOpname");
-const filterKodeOpname = document.getElementById("filterKodeOpname");
-const filterNamaOpname = document.getElementById("filterNamaOpname");
+loadInventory();
 
-// Perbaikan: Ubah event listener untuk tombol Laporan Stok Opname
-document.getElementById("btnStokOpname").addEventListener('click', (e) => {
-  e.preventDefault(); // Mencegah navigasi default
-  showPasswordModal('laporan-opname', 'Laporan Stok Opname');
-});
+// 🔄 Refresh data tiap 5 detik
+setInterval(() => {
+  loadInventory();
 
-document.getElementById("closeModalOpname").onclick=()=>modalOpname.style.display="none";
-window.addEventListener("click",e=>{if(e.target==modalOpname) modalOpname.style.display="none";});
-
-// Tambahkan event listener untuk filter kode barang dan nama barang di modal opname
-filterKodeOpname.addEventListener("input", renderOpname);
-filterNamaOpname.addEventListener("input", renderOpname);
-
-function openOpname(){
-  modalOpname.style.display="flex";
-  // Reset filter saat modal dibuka
-  filterKodeOpname.value = "";
-  filterNamaOpname.value = "";
-  renderOpname();
-}
-
-function renderOpname(){
-  const filterKode = filterKodeOpname.value.toLowerCase();
-  const filterNama = filterNamaOpname.value.toLowerCase();
-
-  const filteredData = inventoryData.filter(row =>  
-    row.kode_barang.toLowerCase().includes(filterKode) &&
-    row.nama_barang.toLowerCase().includes(filterNama)
-  );
-
-  tbodyOpname.innerHTML="";
-  if (filteredData.length === 0) {
-      tbodyOpname.innerHTML = `<tr><td colspan="8">Tidak ada data yang cocok.</td></tr>`;
-      return;
+  const indicator = document.getElementById("autoRefreshIndicator");
+  if (indicator) {
+    indicator.style.background = "#28a745"; // hijau = aktif
+    setTimeout(() => { indicator.style.background = "#ccc"; }, 1000); // balik ke abu
   }
-  
-  filteredData.forEach(row=>{
-    const kodeEsc = row.kode_barang.replace(/'/g, "\\'");
-    tbodyOpname.innerHTML+=`
-      <tr>
-        <td>${row.kode_barang}</td>
-        <td>${row.kode_buyer}</td>
-        <td class="nama-barang">${row.nama_barang}</td>
-        <td>${row.satuan}</td>
-        <td class="angka-kanan">${row.stok.toLocaleString("id-ID")}</td>
-        <td><input type="number" style="width:100px; text-align:right;" value="${row.stok}" data-kode="${row.kode_barang}" onchange="updateSelisih(this)"></td>
-        <td id="selisih-${row.kode_barang}" class="angka-kanan">0</td>
-          <td><input type="text" style="width:200px;" value="" data-kode="${row.kode_barang}" onchange="updateKeterangan(this)"></td>
-      </tr>
-    `;
-  });
-}
-
-function updateSelisih(input){
-  const kode=input.dataset.kode;
-  const stokSistem=inventoryData.find(r=>r.kode_barang===kode).stok;
-  const stokFisik=parseInt(input.value)||0;
-  const selisih=stokFisik-stokSistem;
-  const el=document.getElementById("selisih-"+kode);
-  el.textContent=selisih.toLocaleString("id-ID");
-  el.style.color=selisih!==0?"red":"black";
-}
-
-function updateKeterangan(input){
-  const kode=input.dataset.kode;
-  const nilai=input.value;
-  const item = inventoryData.find(r=>r.kode_barang===kode);
-  if(item) item.keterangan_opname = nilai;
-}
-
-// Export PDF
-document.getElementById("btnExportOpnamePDF").addEventListener("click",()=>{
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("landscape");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("Laporan Stok Opname", 14, 15);
-    const keteranganUmum = document.getElementById('keteranganUmum').value || "-";
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Keterangan: ${keteranganUmum}`, 14, 22);
-
-    const rows = document.getElementById("tabelOpname").querySelector("tbody").rows;
-    const data = [];
-    for (let i = 0; i < rows.length; i++) {
-        const cells = rows[i].cells;
-        const kodeBarang = cells[0].textContent;
-        const kodeBuyer = cells[1].textContent;
-        const namaBarang = cells[2].textContent;
-        const satuan = cells[3].textContent;
-        const stokSistem = cells[4].textContent;
-        const stokFisik = cells[5].querySelector("input").value;
-        const selisih = cells[6].textContent;
-        const keterangan = cells[7].querySelector("input").value;
-
-        data.push([
-            kodeBarang,
-            kodeBuyer,
-            namaBarang,
-            satuan,
-            stokSistem,
-            stokFisik,
-            selisih,
-            keterangan
-        ]);
-    }
-    
-    doc.autoTable({
-        head: [['Kode Barang', 'Kode Buyer', 'Nama Barang', 'Satuan', 'Stok Sistem', 'Stok Fisik', 'Selisih', 'Keterangan']],
-        body: data,
-        startY: 30,
-        theme: "grid",
-        headStyles: { fillColor: [30, 144, 255], textColor: 255, font: "helvetica", fontStyle: "bold", halign: "center" },
-        styles: { font: "helvetica", fontSize: 10 },
-        columnStyles: {
-            4: { halign: 'right' },
-            5: { halign: 'right' },
-            6: { halign: 'right' }
-        }
-    });
-
-    doc.save("Laporan_Stok_Opname.pdf");
-});
-
-// Export Excel (basic HTML -> xls).
-document.getElementById("btnExportOpnameExcel").addEventListener("click",()=>{
-    const table = document.getElementById("tabelOpname");
-    const clone = table.cloneNode(true);
-    const wrapper = document.createElement('table');
-    wrapper.border = 1;
-    const tr = wrapper.insertRow(0); // Sisipkan baris baru di bagian atas
-    const td = tr.insertCell(0); // Sisipkan sel baru
-    td.colSpan = clone.rows[0].cells.length;
-    td.innerHTML = `<b>Laporan Stok Opname</b>`;
-    td.style.textAlign = 'center';
-    td.style.fontSize = '18px';
-    td.style.fontWeight = 'bold';
-    wrapper.appendChild(clone);
-
-    const html = wrapper.outerHTML;
-    const blob = new Blob([html],{type:'application/vnd.ms-excel'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Laporan_Stok_Opname.xls';
-    a.click();
-});
-
-// Fungsi untuk menyimpan penyesuaian stok opname ke Firebase
-document.getElementById("btnSimpanOpname").addEventListener("click", async () => {
-    const konfirmasi = confirm("Apakah Anda yakin ingin menyimpan penyesuaian stok ini? Tindakan ini akan memperbarui stok di database.");
-    if (!konfirmasi) return;
-
-    try {
-        const keteranganUmum = document.getElementById('keteranganUmum').value || "Penyesuaian stok opname";
-        const tabelOpname = document.getElementById("tabelOpname").querySelector("tbody").rows;
-        const batch = db.batch();
-        const today = new Date().toISOString().split('T')[0];
-
-        for (const row of tabelOpname) {
-            const cells = row.cells;
-            const kodeBarang = cells[0].textContent;
-            const stokFisikInput = cells[5].querySelector("input");
-            const keteranganInput = cells[7].querySelector("input");
-            const stokSistem = parseInt(cells[4].textContent.replace(/[^0-9-]/g, '')) || 0;
-            const stokFisik = parseInt(stokFisikInput.value) || 0;
-            const selisih = stokFisik - stokSistem;
-
-            // Hanya proses item dengan selisih
-            if (selisih !== 0) {
-                const itemData = inventoryData.find(item => item.kode_barang === kodeBarang);
-                const dataOpname = {
-                    kode_barang: kodeBarang,
-                    nama_barang: itemData.nama_barang,
-                    satuan: itemData.satuan,
-                    kode_buyer: itemData.kode_buyer,
-                    stok_sistem: stokSistem,
-                    stok_fisik: stokFisik,
-                    selisih: selisih,
-                    keterangan_item: keteranganInput.value || "Penyesuaian",
-                    tanggal_opname: today,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                };
-
-                // Simpan data opname ke koleksi baru 'stokOpname'
-                const opnameRef = db.collection("stokOpname").doc();
-                batch.set(opnameRef, dataOpname);
-
-                // Buat transaksi baru di barangMasuk atau barangKeluar untuk mencatat selisih
-                if (selisih > 0) {
-                    const masukRef = db.collection("barangMasuk").doc();
-                    batch.set(masukRef, {
-                        kode_barang: kodeBarang,
-                        nama_barang: itemData.nama_barang,
-                        satuan: itemData.satuan,
-                        kode_buyer: itemData.kode_buyer,
-                        jumlah: selisih,
-                        tanggal: today,
-                        keterangan: "Penyesuaian Stok Opname",
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } else if (selisih < 0) {
-                    const keluarRef = db.collection("barangKeluar").doc();
-                    batch.set(keluarRef, {
-                        kode_barang: kodeBarang,
-                        nama_barang: itemData.nama_barang,
-                        satuan: itemData.satuan,
-                        kode_buyer: itemData.kode_buyer,
-                        jumlah: Math.abs(selisih),
-                        tanggal: today,
-                        keterangan: "Penyesuaian Stok Opname",
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                }
-            }
-        }
-        await batch.commit();
-        alert("Penyesuaian stok berhasil disimpan!");
-        modalOpname.style.display = "none";
-        loadInventory();
-    } catch (error) {
-        console.error("Gagal menyimpan penyesuaian stok:", error);
-        alert("Terjadi kesalahan saat menyimpan penyesuaian.");
-    }
-});
-
-// === Fitur Password untuk Halaman Tertentu ===
-const modalPassword = document.getElementById("modalPassword");
-const passwordInput = document.getElementById("passwordInput");
-const btnSubmitPassword = document.getElementById("btnSubmitPassword");
-const btnCancelPassword = document.getElementById("btnCancelPassword");
-const passwordModalTitle = document.getElementById("passwordModalTitle");
-
-// === PERHATIAN: GANTI PASSWORD DI BAWAH INI ===
-const passwords = {
-    'form-masuk.html': 'ELAND123',
-    'form-keluar.html': 'ELAND123',
-    'laporan-opname': 'ELAND123' 
-    // Password 'grafik' dihapus
-};
-
-let redirectUrl = '';
-
-function showPasswordModal(url, title) {
-    redirectUrl = url;
-    passwordModalTitle.textContent = title;
-    passwordInput.value = ''; // Bersihkan input
-    modalPassword.style.display = 'flex';
-}
-
-function verifyPassword() {
-    const enteredPassword = passwordInput.value;
-    const correctPassword = passwords[redirectUrl];
-
-    if (enteredPassword === correctPassword) {
-        modalPassword.style.display = 'none'; // Sembunyikan modal password
-        if (redirectUrl === 'laporan-opname') {
-            openOpname(); // Tampilkan modal laporan stok opname
-        } else {
-            window.location.href = redirectUrl;
-        }
-    } else {
-        alert("Password salah.");
-    }
-}
-
-// Tambahkan event listener untuk tautan (kecuali Grafik)
-document.querySelectorAll('.sidebar a').forEach(link => {
-    const url = link.getAttribute('href');
-    const text = link.textContent;
-    
-    // Lewati tombol Grafik
-    if (link.id === 'btnGrafik') {
-        return;
-    }
-
-    if (passwords[url]) {
-        link.addEventListener('click', (event) => {
-            event.preventDefault(); // Mencegah navigasi default
-            showPasswordModal(url, text);
-        });
-    }
-});
-
-// === PERUBAHAN UTAMA DI SINI ===
-// Event Listener untuk Tombol Grafik (TANPA PASSWORD)
-document.getElementById("btnGrafik").addEventListener('click', (e) => {
-  e.preventDefault();
-  openGrafikModal(); // Panggil fungsi langsung
-});
-// ===============================
-
-btnSubmitPassword.addEventListener('click', verifyPassword);
-passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        verifyPassword();
-    }
-});
-
-btnCancelPassword.addEventListener('click', () => {
-    modalPassword.style.display = 'none';
-});
-
-// Tutup modal jika user mengklik area luar
-window.addEventListener('click', (e) => {
-    if (e.target === modalPassword) {
-        modalPassword.style.display = 'none';
-    }
-});
-
-// Fungsi dan Logika untuk Grafik
-const modalGrafik = document.getElementById("modalGrafik");
-const closeModalGrafik = document.getElementById("closeModalGrafik");
-let mutasiChart = null; // Variabel global untuk menyimpan instance Chart
-
-closeModalGrafik.onclick = () => modalGrafik.style.display = "none";
-window.addEventListener("click", e => { if (e.target === modalGrafik) modalGrafik.style.display = "none"; });
-
-function getDatesForLastTwelveMonths() {
-    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-    const labels = [];
-    const today = new Date();
-    
-    // Mulai dari 11 bulan yang lalu sampai bulan ini (total 12 bulan)
-    for (let i = 11; i >= 0; i--) {
-        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        labels.push(`${months[date.getMonth()]} ${date.getFullYear()}`);
-    }
-    return labels;
-}
-
-function getStartOfTwelveMonthsAgo() {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 11);
-    d.setDate(1); // Mulai dari tanggal 1
-    d.setHours(0, 0, 0, 0);
-    return d;
-}
-
-async function fetchMutasiDataForChart() {
-    const startPeriod = getStartOfTwelveMonthsAgo();
-
-    try {
-        
-        // Ambil semua data Masuk dan Keluar.
-        const masukSnap = await db.collection("barangMasuk").get();
-        const keluarSnap = await db.collection("barangKeluar").get();
-        
-        const dataByMonth = {};
-        const monthLabels = getDatesForLastTwelveMonths();
-        
-        // Inisialisasi data bulanan
-        for(let label of monthLabels) {
-            dataByMonth[label] = { masuk: 0, keluar: 0 };
-        }
-
-        const dateToMonthLabel = (dateString) => {
-            const date = new Date(dateString);
-            const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-            return `${months[date.getMonth()]} ${date.getFullYear()}`;
-        };
-
-        const filterAndProcess = (snapshot, type) => {
-            snapshot.forEach(doc => {
-                const d = doc.data();
-                const transactionDate = new Date(d.tanggal);
-                
-                // Hanya proses data dalam periode 12 bulan terakhir
-                if (transactionDate >= startPeriod) {
-                    const monthLabel = dateToMonthLabel(d.tanggal);
-                    if (dataByMonth[monthLabel]) {
-                        dataByMonth[monthLabel][type] += d.jumlah || 0;
-                    }
-                }
-            });
-        };
-
-        filterAndProcess(masukSnap, 'masuk');
-        filterAndProcess(keluarSnap, 'keluar');
-        
-        const masukData = monthLabels.map(label => dataByMonth[label].masuk);
-        const keluarData = monthLabels.map(label => dataByMonth[label].keluar);
-
-        return { labels: monthLabels, masuk: masukData, keluar: keluarData };
-
-    } catch (error) {
-        console.error("Gagal mengambil data mutasi untuk grafik:", error);
-        alert("Gagal memuat data grafik. Cek konsol untuk detail.");
-        return { labels: [], masuk: [], keluar: [] };
-    }
-}
-
-async function openGrafikModal() {
-    modalGrafik.style.display = "flex";
-    
-    const chartData = await fetchMutasiDataForChart();
-    
-    renderMutasiChart(chartData.labels, chartData.masuk, chartData.keluar);
-}
-
-function renderMutasiChart(labels, masukData, keluarData) {
-    const ctx = document.getElementById('mutasiChart').getContext('2d');
-    
-    // Hancurkan instance chart yang lama jika ada
-    if (mutasiChart) {
-        mutasiChart.destroy();
-    }
-    
-    mutasiChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Barang Masuk',
-                data: masukData,
-                borderColor: '#28a745', // Hijau
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                fill: true,
-                tension: 0.1
-            }, {
-                label: 'Barang Keluar',
-                data: keluarData,
-                borderColor: '#dc3545', // Merah
-                backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                fill: true,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: 'Total Barang Masuk & Keluar per Bulan'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Jumlah Unit'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Periode (Bulan)'
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Toggle sidebar di mobile
-const hamburger = document.querySelector('.hamburger');
-const sidebar = document.querySelector('.sidebar');
-hamburger.addEventListener('click', () => {
-    sidebar.classList.toggle('active');
-});
+}, 3000);
 </script>
 </body>
 </html>
-
-
-
