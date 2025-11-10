@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analisis Pergerakan Stok</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+
+<style>
+/* CSS Dasar */
+* { box-sizing: border-box; }
+body, html { margin:0; padding:0; font-family: Arial,sans-serif; height:100vh; display:flex; flex-direction:column; font-size: 14px; }
+.wrapper { min-height:100vh; display:flex; flex-direction:column; flex-grow:1; }
+
+/* Tampilan Ringkas */
+header { 
+    background:#1e90ff; color:white; text-align:center; padding:0; 
+    height: 60px; 
+    line-height: 60px; 
+    font-size: 24px; 
+    font-weight:bold; user-select:none; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); 
+}
+.main-content { display:flex; flex:1; overflow:hidden; min-height:0; }
+.sidebar { background:#333; width:180px; padding:10px; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+.sidebar a, .sidebar button { 
+    background:#444; color:white; text-decoration:none; border:none; 
+    padding:8px 10px; 
+    margin-bottom:8px; border-radius:4px; 
+    text-align:left; cursor:pointer; font-size:14px; 
+    transition:0.3s; 
+}
+.content { flex:1; padding:15px; overflow-y:auto; display:flex; flex-direction:column; min-height:0; overflow-x:auto; }
+
+/* Filter & Export Bar Styles */
+.control-bar { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px;
+    gap: 10px;
+}
+.filters { 
+    display:flex; 
+    gap:8px; 
+    flex-wrap:wrap; 
+    flex-grow: 1; 
+}
+.filters input[type="text"] { 
+    padding:5px 8px; 
+    border-radius:3px; border:1px solid #ccc; flex:1 1 150px; 
+    font-size:13px; 
+}
+.export-buttons {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.export-buttons button {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+.export-buttons button:hover {
+    background: #1e7e34;
+}
+.export-buttons button.pdf {
+    background: #dc3545;
+}
+.export-buttons button.pdf:hover {
+    background: #c82333;
+}
+
+/* DEAD STOCK BUTTON STYLE */
+.deadstock {
+    background: #ffc107; 
+    color: #343a40 !important; 
+}
+.deadstock:hover {
+    background: #e0a800 !important;
+}
+/* END DEAD STOCK BUTTON STYLE */
+
+
+table { width:100%; min-width:600px; border-collapse:collapse; background:#fff; box-shadow:0 0 5px rgba(0,0,0,0.1); font-size: 13px; }
+th, td { border:1px solid rgba(0,0,0,0.3); padding:6px; text-align:center; }
+th { 
+    background:#1e90ff; 
+    color:white; 
+    user-select:none; 
+    cursor:pointer;
+    position: sticky; 
+    top: 0; 
+    z-index: 10; 
+}
+tr:nth-child(even){ background:#f9f9f9; }
+tr:hover{ background:#d0e7ff; }
+td.nama-barang { text-align:left; padding-left:6px; }
+td.angka-kanan { text-align:right; font-family:monospace; padding-right:8px; font-size:13px; }
+.saldo-nol { background:#f8d7da; } 
+.saldo-rendah { background:#fff3cd; } 
+footer { background:#007bff; color:white; text-align:center; padding:8px 0; flex-shrink:0; font-size:12px; }
+
+/* Tab Styles */
+.tabs { display:flex; margin-bottom:10px; border-bottom:2px solid #ccc; }
+.tab-button { background:none; border:none; padding:8px 12px; cursor:pointer; font-size:15px; color:#555; border-bottom:3px solid transparent; transition:0.3s; margin-bottom:-2px; }
+.tab-button.active { color:#1e90ff; border-bottom-color:#1e90ff; font-weight:bold; }
+.tab-content { display:none; flex-direction:column; flex-grow:1; max-height: 100%; } 
+.tab-content.active { display:flex; }
+
+/* Paginasi Styles */
+.pagination { 
+    margin-top: 15px; 
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    display: flex; 
+    justify-content: flex-end; 
+    align-items: center; 
+    gap: 5px; 
+    flex-wrap: wrap;
+}
+.pagination-info {
+    margin-right: 15px;
+    font-size: 14px;
+    color: #555;
+}
+.pagination button {
+    background: #f4f4f4;
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+    font-size: 13px;
+}
+.pagination button:hover:not(:disabled) {
+    background: #ddd;
+}
+.pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.pagination button.active-page {
+    background: #1e90ff;
+    color: white;
+    border-color: #1e90ff;
+}
+
+/* MODAL STYLES */
+.modal {
+    display: none; 
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto; 
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%; 
+    max-width: 400px; 
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+.close-button:hover,
+.close-button:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+.modal-content h3 {
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.form-group input[type="number"], .form-group input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.modal-actions {
+    text-align: right;
+    margin-top: 20px;
+}
+.modal-actions button {
+    padding: 10px 15px;
+    margin-left: 10px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+.modal-actions .cancel {
+    background: #ccc;
+}
+.modal-actions .process {
+    background: #dc3545;
+    color: white;
+}
+
+
+/* Media Query untuk layar kecil */
+@media(max-width:768px){ 
+    .main-content{flex-direction:column;} 
+    .sidebar{width:100%; flex-direction:row; flex-wrap:wrap; justify-content:center; gap:5px; padding:10px 5px;} 
+    .sidebar p{display:none;} 
+    .content{padding:10px;}
+    .tabs{flex-wrap:wrap;}
+    .tab-button{flex:1 1 30%; font-size:13px;}
+    .filters { order: 2; flex: 1 1 100%;} 
+    .export-buttons { order: 1; flex: 1 1 100%; justify-content: flex-end; } 
+}
+</style>
+</head>
+<body>
+<div class="wrapper">
+    <header>Analisis Pergerakan Stok</header>
+    <div class="main-content">
+        <nav class="sidebar">
+            </nav>
+
+        <main class="content" id="mainContent">
+            
+            <div class="tabs">
+                <button class="tab-button active" onclick="showTab('fastMoving')">Fast Moving (≤ 6 Bulan)</button>
+                <button class="tab-button" onclick="showTab('slowMoving')">Slow Moving (6 Bln - 2 Thn)</button>
+                <button class="tab-button" onclick="showTab('nonMoving')">Non-Moving (> 2 Tahun)</button>
+            </div>
+
+            <div id="fastMoving" class="tab-content active">
+                
+                <div class="control-bar">
+                    <div class="filters">
+                        <input type="text" id="filterFastKodeBuyer" placeholder="Filter Kode Buyer" oninput="renderFilteredData('fastMoving')" />
+                        <input type="text" id="filterFastNamaBarang" placeholder="Filter Nama Barang" oninput="renderFilteredData('fastMoving')" />
+                    </div>
+                    <div class="export-buttons">
+                        <button class="excel" onclick="exportData('fastMoving', 'excel')">Export Excel</button>
+                        <button class="pdf" onclick="exportData('fastMoving', 'pdf')">Export PDF</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x:auto; flex-grow:1; min-height:0;"> 
+                    <table id="tabelFastMoving">
+                        <thead>
+                            <tr>
+                                <th>Kode Barang</th>
+                                <th>Kode Buyer</th>
+                                <th>Nama Barang</th>
+                                <th>Satuan</th>
+                                <th>Stok Tersisa</th>
+                                <th>Usia Stok</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+                <div id="paginationFastMoving" class="pagination"></div>
+            </div>
+
+            <div id="slowMoving" class="tab-content">
+                
+                <div class="control-bar">
+                    <div class="filters">
+                        <input type="text" id="filterSlowKodeBuyer" placeholder="Filter Kode Buyer" oninput="renderFilteredData('slowMoving')" />
+                        <input type="text" id="filterSlowNamaBarang" placeholder="Filter Nama Barang" oninput="renderFilteredData('slowMoving')" />
+                    </div>
+                    <div class="export-buttons">
+                        <button class="excel" onclick="exportData('slowMoving', 'excel')">Export Excel</button>
+                        <button class="pdf" onclick="exportData('slowMoving', 'pdf')">Export PDF</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x:auto; flex-grow:1; min-height:0;">
+                    <table id="tabelSlowMoving">
+                        <thead>
+                            <tr>
+                                <th>Kode Barang</th>
+                                <th>Kode Buyer</th>
+                                <th>Nama Barang</th>
+                                <th>Satuan</th>
+                                <th>Stok Tersisa</th>
+                                <th>Usia Stok</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+                <div id="paginationSlowMoving" class="pagination"></div>
+            </div>
+
+            <div id="nonMoving" class="tab-content">
+
+                <div class="control-bar">
+                    <div class="filters">
+                        <input type="text" id="filterNonKodeBuyer" placeholder="Filter Kode Buyer" oninput="renderFilteredData('nonMoving')" />
+                        <input type="text" id="filterNonNamaBarang" placeholder="Filter Nama Barang" oninput="renderFilteredData('nonMoving')" />
+                    </div>
+                    <div class="export-buttons">
+                        <button class="excel" onclick="exportData('nonMoving', 'excel')">Export Excel</button>
+                        <button class="pdf" onclick="exportData('nonMoving', 'pdf')">Export PDF</button>
+                        </div>
+                </div>
+
+                <div style="overflow-x:auto; flex-grow:1; min-height:0;">
+                    <table id="tabelNonMoving">
+                        <thead>
+                            <tr>
+                                <th>Kode Barang</th>
+                                <th>Kode Buyer</th>
+                                <th>Nama Barang</th>
+                                <th>Satuan</th>
+                                <th>Stok Tersisa</th>
+                                <th>Usia Stok</th>
+                                <th style="width: 80px;">Aksi</th> 
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+                <div id="paginationNonMoving" class="pagination"></div>
+            </div>
+
+        </main>
+    </div>
+    
+    <div id="deadStockModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button" onclick="closeModal()">&times;</span>
+        <h3>Pengeluaran Stok Non-Moving</h3>
+        
+        <div class="form-group">
+          <label>Kode Barang:</label>
+          <input type="text" id="modalKodeBarang" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label>Nama Barang:</label>
+          <input type="text" id="modalNamaBarang" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Stok Tersedia:</label>
+          <input type="text" id="modalStokTersedia" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label for="modalJumlahKeluarkan">Jumlah yang Dikeluarkan (Write-Off):</label>
+          <input type="number" id="modalJumlahKeluarkan" min="1">
+        </div>
+
+        <div class="modal-actions">
+          <button class="cancel" onclick="closeModal()">Batal</button>
+          <button class="process" onclick="confirmWriteOff()">Keluarkan Stok</button>
+        </div>
+      </div>
+    </div>
+    <footer>Copyright © 2025 Eland</footer>
+</div>
+
+<script>
+// --- KONSTANTA & INISIALISASI ---
+const ITEMS_PER_PAGE = 20; 
+
+// Konfigurasi Firebase Anda
+const firebaseConfig = {
+    apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo", // <-- Ganti dengan API Key Anda
+    authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+    projectId: "inventory-gudang-16dfe",
+    storageBucket: "inventory-gudang-16dfe.appspot.com",
+    messagingSenderId: "663364522026",
+    appId: "1:663364522026:web:f48fb1ba0331695de83353"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Global data arrays dan state
+let fastMovingData = [];
+let slowMovingData = [];
+let nonMovingData = [];
+let currentWriteOffItem = null; // State untuk modal
+
+// State paginasi untuk setiap tab
+let currentPage = {
+    fastMoving: 1,
+    slowMoving: 1,
+    nonMoving: 1
+};
+
+
+// --- FUNGSI NAVIGASI & OTENTIKASI ---
+auth.onAuthStateChanged(user=>{
+    // Jika tidak ada user, redirect ke login.html (asumsi)
+    // if(!user) window.location.href='login.html'; 
+    // else 
+    loadPergerakanStok();
+});
+
+function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`.tab-button[onclick="showTab('${tabId}')"]`).classList.add('active');
+    
+    currentPage[tabId] = 1;
+    renderFilteredData(tabId); 
+}
+
+// --- LOGIKA UTAMA: MENGAMBIL & MENGOLAH DATA ---
+async function loadPergerakanStok() {
+    try {
+        // Asumsi struktur data: barangMasuk dan barangKeluar
+        const [masukSnap, keluarSnap] = await Promise.all([
+            db.collection("barangMasuk").orderBy("tanggal", "desc").get(),
+            db.collection("barangKeluar").orderBy("tanggal", "desc").get()
+        ]);
+        
+        let inventoryMap = {};
+
+        // 1. Proses Barang Masuk & Keluar (Hitung Stok Akhir dan Tanggal Terakhir)
+        masukSnap.forEach(doc => {
+            const d = doc.data();
+            if (!inventoryMap[d.kode_barang]) {
+                inventoryMap[d.kode_barang] = {
+                    kode_barang: d.kode_barang, 
+                    kode_buyer: d.kode_buyer || "", 
+                    nama_barang: d.nama_barang || "", 
+                    satuan: d.satuan || "", 
+                    stok: 0, 
+                    last_date: new Date(d.tanggal)
+                };
+            }
+            inventoryMap[d.kode_barang].stok += d.jumlah || 0;
+            const tgl = new Date(d.tanggal);
+            if (tgl > inventoryMap[d.kode_barang].last_date) {
+                inventoryMap[d.kode_barang].last_date = tgl;
+            }
+        });
+
+        keluarSnap.forEach(doc => {
+            const d = doc.data();
+            if (!inventoryMap[d.kode_barang]) {
+                 inventoryMap[d.kode_barang] = {
+                    kode_barang: d.kode_barang, 
+                    kode_buyer: d.kode_buyer || "", 
+                    nama_barang: d.nama_barang || "", 
+                    satuan: d.satuan || "", 
+                    stok: 0, 
+                    last_date: new Date(d.tanggal)
+                };
+            }
+            inventoryMap[d.kode_barang].stok -= d.jumlah || 0;
+            const tgl = new Date(d.tanggal);
+            if (tgl > inventoryMap[d.kode_barang].last_date) {
+                inventoryMap[d.kode_barang].last_date = tgl;
+            }
+        });
+
+        // 3. Klasifikasi Stok dan Hitung Usia
+        const now = new Date();
+        const oneDay = 1000 * 60 * 60 * 24;
+        const sixMonths = 182.5 * oneDay;
+        const twoYears = 730 * oneDay;
+
+        const allInventory = Object.values(inventoryMap).filter(item => item.stok > 0);
+        
+        fastMovingData = [];
+        slowMovingData = [];
+        nonMovingData = [];
+
+        allInventory.forEach(item => {
+            const timeDiff = now.getTime() - item.last_date.getTime();
+            const daysDiff = Math.floor(timeDiff / oneDay);
+
+            let usiaStok;
+            if (daysDiff < 30) {
+                usiaStok = daysDiff + " hari";
+            } else if (daysDiff < 365) {
+                const months = Math.floor(daysDiff / 30.44);
+                usiaStok = months + " bulan";
+            } else {
+                const years = Math.floor(daysDiff / 365.25);
+                const remainingMonths = Math.floor((daysDiff % 365.25) / 30.44);
+                usiaStok = years + " tahun " + remainingMonths + " bulan";
+            }
+            item.usiaStok = usiaStok;
+
+
+            if (timeDiff <= sixMonths) {
+                fastMovingData.push(item);
+            } else if (timeDiff > sixMonths && timeDiff <= twoYears) {
+                slowMovingData.push(item);
+            } else { 
+                nonMovingData.push(item);
+            }
+        });
+
+        // 4. URUTKAN DATA
+        fastMovingData.sort((a, b) => a.kode_barang.localeCompare(b.kode_barang));
+        slowMovingData.sort((a, b) => a.kode_barang.localeCompare(b.kode_barang));
+        nonMovingData.sort((a, b) => a.kode_barang.localeCompare(b.kode_barang));
+
+        // 5. Render data awal
+        const activeTabId = document.querySelector('.tab-content.active').id;
+        currentPage[activeTabId] = 1;
+        renderFilteredData(activeTabId); 
+
+    } catch (error) {
+        console.error("Gagal memuat data pergerakan stok:", error);
+        alert("Gagal memuat data pergerakan stok. Cek konsol.");
+    }
+}
+
+// Mengambil data yang sudah difilter
+function getFilteredData(tabId) {
+    let rawData;
+    let filterBuyerId;
+    let filterNamaId;
+
+    switch (tabId) {
+        case 'fastMoving':
+            rawData = fastMovingData;
+            filterBuyerId = 'filterFastKodeBuyer';
+            filterNamaId = 'filterFastNamaBarang';
+            break;
+        case 'slowMoving':
+            rawData = slowMovingData;
+            filterBuyerId = 'filterSlowKodeBuyer';
+            filterNamaId = 'filterSlowNamaBarang';
+            break;
+        case 'nonMoving':
+            rawData = nonMovingData;
+            filterBuyerId = 'filterNonKodeBuyer';
+            filterNamaId = 'filterNonNamaBarang';
+            break;
+        default:
+            return [];
+    }
+
+    const filterKodeBuyer = document.getElementById(filterBuyerId).value.toLowerCase();
+    const filterNamaBarang = document.getElementById(filterNamaId).value.toLowerCase();
+
+    return rawData.filter(row => {
+        const matchesBuyer = row.kode_buyer.toLowerCase().includes(filterKodeBuyer);
+        const matchesNama = row.nama_barang.toLowerCase().includes(filterNamaBarang);
+        return matchesBuyer && matchesNama;
+    });
+}
+
+
+// --- LOGIKA FILTER & PAGINASI ---
+
+function renderFilteredData(tabId) {
+    let tableId;
+    let paginationId;
+
+    switch (tabId) {
+        case 'fastMoving':
+            tableId = 'tabelFastMoving';
+            paginationId = 'paginationFastMoving';
+            break;
+        case 'slowMoving':
+            tableId = 'tabelSlowMoving';
+            paginationId = 'paginationSlowMoving';
+            break;
+        case 'nonMoving':
+            tableId = 'tabelNonMoving';
+            paginationId = 'paginationNonMoving';
+            break;
+        default:
+            return;
+    }
+
+    const filteredData = getFilteredData(tabId);
+    const totalItems = filteredData.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+    if (currentPage[tabId] > totalPages && totalPages > 0) {
+        currentPage[tabId] = totalPages;
+    } else if (totalPages === 0) {
+        currentPage[tabId] = 1;
+    }
+
+    const start = (currentPage[tabId] - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const dataOnPage = filteredData.slice(start, end);
+
+    renderTable(tableId, dataOnPage, filteredData.length, currentPage[tabId]);
+    renderPagination(tabId, paginationId, totalPages);
+}
+
+
+function renderTable(tableId, dataOnPage, totalFiltered, currentPageNum) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = "";
+
+    const isNonMoving = (tableId === 'tabelNonMoving');
+    
+    if (totalFiltered === 0) {
+        // Colspan: 6 kolom data + (1 kolom Aksi jika nonMoving)
+        const colspan = isNonMoving ? 7 : 6; 
+        tbody.innerHTML = `<tr><td colspan='${colspan}'>Tidak ada data yang cocok dengan filter.</td></tr>`;
+        return;
+    }
+
+    dataOnPage.forEach((row, index) => {
+        let stokClass = "";
+        if (row.stok === 0) stokClass = "saldo-nol";
+        else if (row.stok <= 5) stokClass = "saldo-rendah";
+
+        let rowHTML = '<tr>';
+
+        // Kolom Data Standar
+        rowHTML += `
+            <td>${row.kode_barang}</td>
+            <td>${row.kode_buyer}</td>
+            <td class="nama-barang">${row.nama_barang}</td>
+            <td>${row.satuan}</td>
+            <td class="angka-kanan ${stokClass}">${row.stok.toLocaleString("id-ID")}</td>
+            <td>${row.usiaStok}</td>
+        `;
+
+        if (isNonMoving) {
+            // Kolom Aksi (paling kanan)
+            rowHTML += `<td><button 
+                class="deadstock" 
+                style="padding: 4px 8px; font-size: 12px;" 
+                onclick="showWriteOffModal('${row.kode_barang}')">
+                Keluarkan
+            </button></td>`;
+        }
+        
+        rowHTML += '</tr>';
+
+        tbody.innerHTML += rowHTML;
+    });
+}
+
+
+function renderPagination(tabId, containerId, totalPages) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    
+    const currentPageNum = currentPage[tabId];
+
+    if (totalPages <= 1) {
+        const info = document.createElement('span');
+        info.className = 'pagination-info';
+        const totalItems = getFilteredData(tabId).length;
+        info.textContent = `Total ${totalItems} data.`;
+        container.appendChild(info);
+        return;
+    }
+
+    const info = document.createElement('span');
+    info.className = 'pagination-info';
+    info.textContent = `Halaman ${currentPageNum} dari ${totalPages}`;
+    container.appendChild(info);
+
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Sebelumnya';
+    prevButton.disabled = currentPageNum === 1;
+    prevButton.onclick = () => changePage(tabId, -1);
+    container.appendChild(prevButton);
+
+    const maxPageButtons = 5;
+    let startPage = Math.max(1, currentPageNum - Math.floor(maxPageButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+    
+    if (endPage - startPage + 1 < maxPageButtons) {
+        startPage = Math.max(1, endPage - maxPageButtons + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const button = document.createElement('button');
+        button.textContent = i;
+        button.className = (i === currentPageNum) ? 'active-page' : '';
+        button.onclick = () => goToPage(tabId, i);
+        container.appendChild(button);
+    }
+    
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Selanjutnya';
+    nextButton.disabled = currentPageNum === totalPages;
+    nextButton.onclick = () => changePage(tabId, 1);
+    container.appendChild(nextButton);
+}
+
+
+function changePage(tabId, direction) {
+    currentPage[tabId] += direction;
+    renderFilteredData(tabId);
+}
+
+function goToPage(tabId, pageNum) {
+    currentPage[tabId] = pageNum;
+    renderFilteredData(tabId);
+}
+
+// --- FUNGSI EXPORT DATA (TETAP SAMA) ---
+
+function getExportTitle(tabId) {
+    switch (tabId) {
+        case 'fastMoving': return { title: "Fast Moving", filename: "Fast_Moving_Stock_Report" };
+        case 'slowMoving': return { title: "Slow Moving", filename: "Slow_Moving_Stock_Report" };
+        case 'nonMoving': return { title: "Non-Moving", filename: "Non_Moving_Stock_Report" };
+        default: return { title: "Stock", filename: "Stock_Report" };
+    }
+}
+
+function exportData(tabId, format) {
+    const dataToExport = getFilteredData(tabId);
+    const titleInfo = getExportTitle(tabId);
+    const filename = titleInfo.filename; 
+    const categoryTitle = titleInfo.title; 
+    
+    if (dataToExport.length === 0) {
+        alert("Tidak ada data untuk diexport.");
+        return;
+    }
+
+    const headers = ['Kode Barang', 'Kode Buyer', 'Nama Barang', 'Satuan', 'Stok Tersisa', 'Usia Stok'];
+    
+    const body = dataToExport.map(item => [
+        item.kode_barang,
+        item.kode_buyer,
+        item.nama_barang,
+        item.satuan,
+        (format === 'pdf') ? item.stok.toLocaleString("id-ID") : item.stok,
+        item.usiaStok
+    ]);
+
+
+    if (format === 'excel') {
+        exportToExcel(headers, body, filename);
+    } else if (format === 'pdf') {
+        exportToPDF(headers, body, filename, categoryTitle); 
+    }
+}
+
+function exportToExcel(headers, body, filename) {
+    const csvHeaderBOM = '\ufeff'; 
+    let csv = headers.join(';') + '\n'; 
+    
+    body.forEach(row => {
+        const rowString = row.map(cell => {
+            let str = String(cell);
+            if (typeof cell !== 'number') {
+                str = str.replace(/"/g, '""');
+                if (str.includes(';') || str.includes('\n')) {
+                    str = `"${str}"`;
+                }
+            }
+            return str;
+        }).join(';'); 
+        csv += rowString + '\n';
+    });
+
+    const finalCsv = csvHeaderBOM + csv;
+    const blob = new Blob([finalCsv], { type: 'text/csv;charset=utf-8;' }); 
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename + ".csv"; 
+    link.click();
+}
+
+function exportToPDF(headers, body, filename, categoryTitle) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape'); 
+    
+    doc.setFontSize(16);
+    doc.text(`FSNM REPORT: ${categoryTitle}`, 14, 20); 
+    doc.setFontSize(10);
+    doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 25);
+
+    doc.autoTable({
+        head: [headers],
+        body: body,
+        startY: 30,
+        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: [30, 144, 255] }, 
+        margin: { top: 10 },
+        columnStyles: {
+            4: { halign: 'right' }, 
+            5: { halign: 'center' }    
+        }
+    });
+    
+    doc.save(filename + ".pdf");
+}
+
+// --- FUNGSI MODAL BARU UNTUK PENGELUARAN STOK ---
+
+function showWriteOffModal(kodeBarang) {
+    const item = nonMovingData.find(d => d.kode_barang === kodeBarang);
+    
+    if (!item) {
+        alert("Data barang tidak ditemukan!");
+        return;
+    }
+
+    currentWriteOffItem = item;
+
+    document.getElementById('modalKodeBarang').value = item.kode_barang;
+    document.getElementById('modalNamaBarang').value = item.nama_barang;
+    document.getElementById('modalStokTersedia').value = item.stok.toLocaleString("id-ID") + " " + item.satuan;
+    
+    const inputJumlah = document.getElementById('modalJumlahKeluarkan');
+    inputJumlah.value = item.stok; // Default diisi semua stok
+    inputJumlah.min = 1;
+    inputJumlah.max = item.stok;
+    
+    document.getElementById('deadStockModal').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('deadStockModal').style.display = 'none';
+    currentWriteOffItem = null;
+}
+
+// Menutup modal jika user klik di luar kotak
+window.onclick = function(event) {
+    const modal = document.getElementById('deadStockModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+// --- FUNGSI PROSES WRITE-OFF DARI MODAL ---
+async function confirmWriteOff() {
+    if (!currentWriteOffItem) return;
+
+    const inputJumlah = document.getElementById('modalJumlahKeluarkan');
+    const quantity = parseInt(inputJumlah.value);
+    const maxStok = currentWriteOffItem.stok;
+
+    // Validasi Input
+    if (isNaN(quantity) || quantity <= 0) {
+        alert("Jumlah yang dikeluarkan harus angka positif.");
+        return;
+    }
+    if (quantity > maxStok) {
+        alert(`Jumlah ${quantity} melebihi stok tersedia (${maxStok}).`);
+        return;
+    }
+
+    // 1. Konfirmasi Akhir
+    const confirmed = confirm(
+        `Anda yakin ingin mengeluarkan ${quantity} unit barang ${currentWriteOffItem.kode_barang} sebagai Dead Stock (Write-Off)? \n\nTINDAKAN INI TIDAK DAPAT DIBATALKAN.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    // 2. Proses ke Firebase (Menulis Transaksi Barang Keluar)
+    try {
+        const now = new Date().toISOString().split('T')[0]; 
+        const newDocRef = db.collection("barangKeluar").doc();
+        
+        const writeOffData = {
+            kode_barang: currentWriteOffItem.kode_barang,
+            kode_buyer: currentWriteOffItem.kode_buyer,
+            nama_barang: currentWriteOffItem.nama_barang,
+            satuan: currentWriteOffItem.satuan,
+            jumlah: quantity, 
+            tanggal: now,
+            keterangan: "Pengeluaran Dead Stock (> 2 Tahun) - Manual Write-Off", 
+            tipe_transaksi: "Dead Stock Write-Off", 
+            user_id: auth.currentUser ? auth.currentUser.uid : "SYSTEM_WRITE_OFF" 
+        };
+        
+        await newDocRef.set(writeOffData);
+
+        alert(`✅ Berhasil! ${quantity} unit ${currentWriteOffItem.kode_barang} telah dikeluarkan.`);
+
+        // 3. Tutup Modal dan Muat Ulang Data
+        closeModal();
+        await loadPergerakanStok(); // Muat ulang untuk update tampilan inventaris
+        
+    } catch (error) {
+        console.error("Gagal melakukan Dead Stock Write-Off:", error);
+        alert("Gagal melakukan pengeluaran dead stok. Cek konsol untuk detail.");
+    }
+}
+</script>
+</body>
+</html>
