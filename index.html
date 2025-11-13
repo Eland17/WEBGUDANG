@@ -58,22 +58,78 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 
 /* MOBILE STYLE */
 @media(max-width:768px){
-  header { font-size:24px; line-height:60px; height:60px; }
-  table { font-size:8px; min-width:0; }
-  th, td { padding:4px 6px; }
-  td.nama-barang { padding-left:4px; }
-  td.angka-kanan { padding-right:4px; font-size:8px; }
-  .filters input, .filters select, #btnExportExcel { font-size:8px; padding:5px 8px; }
-  .sidebar a, .sidebar button { font-size:14px; padding:8px 10px; }
-  .pagination button { padding:0.3rem 0.6rem; font-size:12px; }
-  .marquee-info { font-size:8px; padding:4px 8px; }
+  /* Header */
+  header { 
+    font-size:24px; 
+    line-height:60px; 
+    height:60px; 
+  }
 
-  /* Sidebar collapsible */
+  /* Tabel */
+  table { 
+    font-size:8px; 
+    min-width:0; 
+  }
+  th, td { 
+    padding:4px 6px; 
+  }
+  td.nama-barang { 
+    padding-left:4px; 
+  }
+  td.angka-kanan { 
+    padding-right:4px; 
+    font-size:8px; 
+  }
+
+  /* Filters - dua baris dan tinggi sama */
+  .filters {
+    display:flex;
+    flex-wrap:wrap;  /* pindah baris otomatis */
+    gap:5px;          /* jarak antar filter */
+    margin-bottom:8px;
+  }
+  .filters input, 
+  .filters select, 
+  #btnExportExcel {
+    flex: 0 0 calc(50% - 5px); /* dua baris, 50% lebar per item */
+    font-size:8px;
+    padding:5px 8px;
+    height:30px;              /* tinggi kolom sama */
+    box-sizing:border-box;
+  }
+
+  /* Sidebar */
+  .sidebar a, .sidebar button { 
+    font-size:14px; 
+    padding:8px 10px; 
+  }
   #toggleSidebar { display:block; }
-  .sidebar { position:fixed; top:60px; left:0; width:200px; transform:translateX(-100%); z-index:999; height:calc(100% - 60px); }
+  .sidebar { 
+    position:fixed; 
+    top:60px; 
+    left:0; 
+    width:200px; 
+    transform:translateX(-100%); 
+    z-index:999; 
+    height:calc(100% - 60px); 
+  }
   .sidebar.open { transform:translateX(0); }
   .content { margin-left:0; }
+
+  /* Pagination */
+  .pagination button { 
+    padding:0.3rem 0.6rem; 
+    font-size:12px; 
+  }
+
+  /* Marquee info */
+  .marquee-info { 
+    font-size:8px; 
+    padding:4px 8px; 
+  }
 }
+
+
 </style>
 </head>
 <body>
@@ -386,4 +442,3 @@ window.addEventListener("resize", renderInventory);
 </script>
 </body>
 </html>
-
