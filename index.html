@@ -373,16 +373,17 @@ document.getElementById("btnExportExcel").addEventListener("click", ()=>{
   XLSX.writeFile(wb, `InventoryGudang.xlsx`);
 });
 
-// Auto-refresh every 30 detik
+// Auto-refresh every 2 detik
 loadBuyerDropdown(); // load dropdown only once
 loadInventory();
 setInterval(()=>{ 
   document.getElementById("autoRefreshIndicator").style.background="#28a745";
   loadInventory().finally(()=>{ setTimeout(()=>{ document.getElementById("autoRefreshIndicator").style.background="#ccc"; },500); });
-}, 30000);
+}, 2000);
 
 // Adjust rows per page on resize
 window.addEventListener("resize", renderInventory);
 </script>
 </body>
 </html>
+
