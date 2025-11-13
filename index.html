@@ -18,19 +18,19 @@
 body, html { margin:0; padding:0; font-family: Arial,sans-serif; height:100vh; display:flex; flex-direction:column; }
 .wrapper { min-height:100vh; display:flex; flex-direction:column; flex-grow:1; }
 header { background:#1e90ff; color:white; text-align:center; padding:0; height:120px; line-height:120px; font-size:32px; font-weight:bold; user-select:none; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-.main-content { display:flex; flex:1; overflow:hidden; min-height:0; }
-.sidebar { background:#333; width:220px; padding:20px; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+.main-content { display:flex; flex:1; overflow:hidden; min-height:0; position:relative; }
+.sidebar { background:#333; width:220px; padding:20px; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; transition: transform 0.3s ease; }
 .sidebar a, .sidebar button { background:#444; color:white; text-decoration:none; border:none; padding:12px 15px; margin-bottom:10px; border-radius:5px; text-align:left; cursor:pointer; font-size:16px; transition:0.3s; }
 .sidebar a:hover, .sidebar button:hover { background:#1e90ff; }
-.content { flex:1; padding:20px; overflow-y:auto; display:flex; flex-direction:column; min-height:0; overflow-x:auto; }
+.content { flex:1; padding:20px; overflow-y:auto; display:flex; flex-direction:column; min-height:0; overflow-x:auto; transition: margin-left 0.3s ease; }
 .filters { margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 .filters input[type="text"], .filters input[type="date"], .filters select { padding:7px 10px; border-radius:4px; border:1px solid #ccc; font-size:14px; }
 #filterKodeBarang { width:300px; }
-#filterKodeBuyer { width:400px; }
-#filterNamaBarang { width:400px; }
+#filterKodeBuyer { width:200px; }
+#filterNamaBarang { width:450px; } /* lebih lebar */
 #btnExportExcel { background:#28a745; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; transition:0.3s; }
 #btnExportExcel:hover { background:#218838; }
-table { width:100%; min-width:700px; border-collapse:collapse; background:#fff; box-shadow:0 0 5px rgba(0,0,0,0.1); }
+table { width:100%; min-width:700px; border-collapse:collapse; background:#fff; box-shadow:0 0 5px rgba(0,0,0,0.1); table-layout:auto; }
 th, td { border:1px solid rgba(0,0,0,0.3); padding:8px; text-align:center; }
 th { background:#1e90ff; color:white; user-select:none; cursor:pointer; }
 tr:nth-child(even){ background:#f9f9f9; }
@@ -52,124 +52,108 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 #modalKartuStok th, #modalKartuStok td { border:1px solid #333; padding:6px; text-align:center; }
 #modalKartuStok th { background:#1e90ff; color:white; }
 
-@media(max-width:768px){ 
-  .main-content{flex-direction:column;} 
-  .sidebar{width:100%; flex-direction:row; flex-wrap:wrap; justify-content:center; gap:10px;} 
-  .sidebar a,.sidebar button{flex:1 1 40%; margin:5px; text-align:center;} 
-  .filters{flex-direction:column;} 
-  .filters input, .filters select{flex:1 1 100%;} 
-  .marquee-info{font-size:8px;} 
-}
-/* Tambahkan di bagian bawah style kamu */
+/* Toggle button untuk mobile sidebar */
+#toggleSidebar { display:none; position:fixed; top:10px; left:10px; z-index:1000; padding:5px 10px; font-size:20px; cursor:pointer; }
+
+/* MOBILE STYLE */
 @media(max-width:768px){
+  header { font-size:24px; line-height:60px; height:60px; }
   table { font-size:8px; min-width:0; }
   th, td { padding:4px 6px; }
   td.nama-barang { padding-left:4px; }
   td.angka-kanan { padding-right:4px; font-size:8px; }
   .filters input, .filters select, #btnExportExcel { font-size:8px; padding:5px 8px; }
   .sidebar a, .sidebar button { font-size:14px; padding:8px 10px; }
-  header { font-size:24px; line-height:60px; height:60px; }
   .pagination button { padding:0.3rem 0.6rem; font-size:12px; }
   .marquee-info { font-size:8px; padding:4px 8px; }
+
+  /* Sidebar collapsible */
+  #toggleSidebar { display:block; }
+  .sidebar { position:fixed; top:60px; left:0; width:200px; transform:translateX(-100%); z-index:999; height:calc(100% - 60px); }
+  .sidebar.open { transform:translateX(0); }
+  .content { margin-left:0; }
 }
+.filters {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Semua input/select/button filter */
+.filters input,
+.filters select,
+#btnExportExcel {
+  box-sizing: border-box;
+  height: 36px;          
+  line-height: 36px;     
+  padding: 0 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  flex: 1 1 150px;
+  max-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reset default browser styling select */
+.filters select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Tombol export */
+#btnExportExcel {
+  flex: 1 1 100px;
+  max-width: 120px;
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+  cursor: pointer;
+  background:#28a745;
+  color:white;
+  border:none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile */
 @media(max-width:768px){
-  /* === FILTERS & LABEL === */
-  .filters {
-    display: flex;
-    flex-direction: column; /* tetap vertikal */
-    gap: 3px;               /* jarak antar filter */
-    align-items: stretch;   /* semua kolom sama lebar */
-  }
-
-  /* Label filter / Kartu Stok */
-  .filters label,
-  .filters .filter-title {
-    font-size: 8px;       /* sama dengan font tabel */
-    line-height: 24px;     /* vertikal center */
-    margin-bottom: 2px;    /* jarak ke input */
-  }
-
-  /* Semua input/select/button filter */
-  .filters input[type="text"],
-  .filters input[type="date"],
+  .filters input,
   .filters select,
-  .filters button,
   #btnExportExcel {
-    width: 100%;           /* semua kolom sama lebar */
-    max-width: 220px;      /* lebar maksimal */
-    min-width: 120px;      /* lebar minimal */
-    font-size: 8px;       /* sama dengan tabel */
-    padding: 2px 4px;      /* padding minimal */
-    height: 28px;          /* tinggi konsisten */
-    line-height: 24px;     /* teks vertikal center */
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-    max-height: 28px;
-    min-height: 28px;
-  }
-
-  /* === TABEL === */
-  table {
-    width: 100%;
-    table-layout: fixed;    /* lebar kolom bisa diatur */
-    font-size: 8px;        /* sama dengan filter/label */
-    border-collapse: collapse;
-  }
-
-  th, td {
-    padding: 4px 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: middle;
-  }
-
-  /* Atur lebar kolom agar proporsional */
-  th.kode-barang, td.kode-barang { width: 15%; }
-  th.nama-barang, td.nama-barang { width: 35%; }
-  th.jumlah-masuk, td.jumlah-masuk { width: 12%; text-align:right; }
-  th.jumlah-keluar, td.jumlah-keluar { width: 12%; text-align:right; }
-  th.stok, td.stok { width: 12%; text-align:right; } /* kolom stok menyesuaikan */
-  th.keterangan, td.keterangan { width: 14%; }
-
-  /* Padding khusus */
-  td.nama-barang { padding-left: 3px; }
-  td.angka-kanan { padding-right: 3px; text-align:right; }
-
-  /* Opsional: scroll horizontal jika layar terlalu sempit */
-  .table-wrapper {
-    overflow-x: auto;
+    flex: 1 1 100px;
+    max-width: 100%;
+    font-size: 10px;
+    height: 28px;
+    line-height: 28px;
+    padding: 0 4px;
   }
 }
-
 </style>
 </head>
 <body>
 <div class="wrapper">
   <header>Inventory Gudang</header>
+  <button id="toggleSidebar">☰</button>
+
   <div class="main-content">
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
       <a href="form-masuk.html">Barang Masuk</a>
       <a href="form-keluar.html">Barang Keluar</a>
       <a href="mutasi.html">Mutasi Barang</a>
       <a href="laporan-stok-opname.html">Laporan Stok Opname</a>
       <a href="fsnm.html">FSNM Report</a>
-      <a href="grafik.html">Grafik</a>
       <button id="btnLogout" style="background:#d9534f;">Logout</button>
     </nav>
 
     <main class="content" id="mainContent">
-      <div id="autoRefreshIndicator" style="
-       position:absolute; 
-       top:10px; 
-       right:20px; 
-       width:12px; 
-       height:12px; 
-       border-radius:50%; 
-       background:#ccc; 
-       box-shadow:0 0 5px rgba(0,0,0,0.2);">
-      </div>
+      <div id="autoRefreshIndicator" style="position:absolute; top:10px; right:20px; width:12px; height:12px; border-radius:50%; background:#ccc; box-shadow:0 0 5px rgba(0,0,0,0.2);"></div>
 
       <div class="filters">
         <input type="text" id="filterKodeBarang" placeholder="Kode Barang" />
@@ -178,7 +162,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
         <button id="btnExportExcel">Export Excel</button>
       </div>
 
-      <div style="overflow-x:auto;">
+      <div class="table-wrapper">
         <table id="tabelInventory">
           <thead>
             <tr>
@@ -200,11 +184,10 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
         <button id="nextPage">Berikutnya</button>
       </div>
 
-      <marquee class="marquee-info" behavior="scroll" direction="left" scrollamount="4">
-        Info penting berjalan di sini...
-      </marquee>
+      <marquee class="marquee-info" behavior="scroll" direction="left" scrollamount="4">Info penting berjalan di sini...</marquee>
     </main>
   </div>
+  
   <footer>Copyright © 2025 Eland</footer>
 </div>
 
@@ -241,6 +224,11 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 </div>
 
 <script>
+// ================== Sidebar toggle mobile ==================
+const toggleSidebarBtn = document.getElementById("toggleSidebar");
+const sidebar = document.getElementById("sidebar");
+toggleSidebarBtn.addEventListener("click", ()=> sidebar.classList.toggle("open"));
+
 // ================== Firebase Init ==================
 const firebaseConfig = {
   apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
@@ -443,16 +431,13 @@ setInterval(()=>{
 // Auto-reload data setiap 3 detik tanpa merusak filter
 async function autoReload(){
   try {
-    // Simpan filter dan page sekarang
     const kodeFilter=document.getElementById("filterKodeBarang").value;
     const buyerFilter=document.getElementById("filterKodeBuyer").value;
     const namaFilter=document.getElementById("filterNamaBarang").value;
     const savedPage=currentPage;
 
-    // Reload data dari Firestore
     await loadInventory();
 
-    // Pulihkan filter dan halaman
     document.getElementById("filterKodeBarang").value=kodeFilter;
     document.getElementById("filterKodeBuyer").value=buyerFilter;
     document.getElementById("filterNamaBarang").value=namaFilter;
@@ -462,15 +447,11 @@ async function autoReload(){
   } catch(err){
     console.error("Reload error:", err);
   } finally {
-    setTimeout(autoReload, 3000); // setiap 3 detik
+    setTimeout(autoReload, 3000);
   }
 }
 
-// Jalankan auto reload
 autoReload();
-
 </script>
 </body>
 </html>
-
-
