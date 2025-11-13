@@ -58,25 +58,25 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   .sidebar a,.sidebar button{flex:1 1 40%; margin:5px; text-align:center;} 
   .filters{flex-direction:column;} 
   .filters input, .filters select{flex:1 1 100%;} 
-  .marquee-info{font-size:14px;} 
+  .marquee-info{font-size:8px;} 
 }
 /* Tambahkan di bagian bawah style kamu */
 @media(max-width:768px){
-  table { font-size:12px; min-width:0; }
+  table { font-size:8px; min-width:0; }
   th, td { padding:4px 6px; }
   td.nama-barang { padding-left:4px; }
-  td.angka-kanan { padding-right:4px; font-size:12px; }
-  .filters input, .filters select, #btnExportExcel { font-size:12px; padding:5px 8px; }
+  td.angka-kanan { padding-right:4px; font-size:8px; }
+  .filters input, .filters select, #btnExportExcel { font-size:8px; padding:5px 8px; }
   .sidebar a, .sidebar button { font-size:14px; padding:8px 10px; }
   header { font-size:24px; line-height:60px; height:60px; }
   .pagination button { padding:0.3rem 0.6rem; font-size:12px; }
-  .marquee-info { font-size:12px; padding:4px 8px; }
+  .marquee-info { font-size:8px; padding:4px 8px; }
 }
 @media(max-width:768px){
   .filters {
     display: flex;
-    flex-direction: column; /* kolom vertikal */
-    gap:3px;                /* jarak antar kolom sama */
+    flex-direction: column; /* tetap vertikal */
+    gap: 3px;               /* jarak antar kolom sama */
     align-items: stretch;   /* semua kolom sama lebar */
   }
 
@@ -85,24 +85,31 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   .filters input[type="date"],
   .filters select,
   #btnExportExcel {
-    width: 100%;            /* full width */
-    font-size:11px;         /* lebih kecil */
-    padding:2px 4px;        /* padding minimal */
-    height:28px;            /* tinggi konsisten */
-    line-height:24px;       /* teks vertikal center */
-    border-radius:4px;
-    border:1px solid #ccc;
-    box-sizing:border-box;    
-    max-height:28px;
-    min-height:28px;
+    width: 100%;           /* semua kolom sama lebar (full container) */
+    max-width: 220px;      /* lebar maksimal supaya rapi */
+    min-width: 120px;      /* lebar minimal supaya tidak terlalu sempit */
+    font-size: 8px;       /* lebih kecil */
+    padding: 2px 4px;      /* padding minimal */
+    height: 28px;          /* tinggi konsisten */
+    line-height: 24px;     /* teks vertikal center */
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    max-height: 28px;
+    min-height: 28px;
   }
 
   /* Tabel menyesuaikan font & padding agar selaras */
-  table { font-size:11px; min-width:0; width:100%; }
-  th, td { padding:4px 3px; }
-  td.nama-barang { padding-left:3px; }
-  td.angka-kanan { padding-right:3px; }
+  table { 
+    font-size: 8px; 
+    min-width: 0; 
+    width: 100%; 
+  }
+  th, td { padding: 4px 3px; }
+  td.nama-barang { padding-left: 3px; }
+  td.angka-kanan { padding-right: 3px; }
 }
+
 
 
 </style>
