@@ -61,8 +61,8 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   /* Header */
   header { 
     font-size:24px; 
-    line-height:60px; 
-    height:60px; 
+    line-height:45px; 
+    height:45px; 
   }
 
   /* Tabel */
@@ -81,20 +81,20 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     font-size:8px; 
   }
 
-  /* Filters - dua baris, lebar lebih kecil, tinggi sama */
+  /* Filters - dua baris dan tinggi sama */
   .filters {
     display:flex;
     flex-wrap:wrap;  /* pindah baris otomatis */
-    gap:5px;          /* jarak antar filter */
+    gap: 2px;px;          /* jarak antar filter */
     margin-bottom:8px;
   }
   .filters input, 
   .filters select, 
   #btnExportExcel {
-    flex: 0 0 45%;   /* lebar kolom lebih kecil */
+    flex: 0 0 calc(35% - 4px); /* dua baris, 50% lebar per item */
     font-size:8px;
     padding:5px 8px;
-    height:30px;     /* tinggi sama */
+    height:30px;              /* tinggi kolom sama */
     box-sizing:border-box;
   }
 
@@ -128,6 +128,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     padding:4px 8px; 
   }
 }
+
 
 </style>
 </head>
