@@ -73,7 +73,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   .marquee-info { font-size:8px; padding:4px 8px; }
 }
 @media(max-width:768px){
-  /* === FILTERS === */
+  /* === FILTERS & LABEL === */
   .filters {
     display: flex;
     flex-direction: column; /* tetap vertikal */
@@ -81,6 +81,15 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     align-items: stretch;   /* semua kolom sama lebar */
   }
 
+  /* Label filter / Kartu Stok */
+  .filters label,
+  .filters .filter-title {
+    font-size: 8px;       /* sama dengan font tabel */
+    line-height: 24px;     /* vertikal center */
+    margin-bottom: 2px;    /* jarak ke input */
+  }
+
+  /* Semua input/select/button filter */
   .filters input[type="text"],
   .filters input[type="date"],
   .filters select,
@@ -89,7 +98,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     width: 100%;           /* semua kolom sama lebar */
     max-width: 220px;      /* lebar maksimal */
     min-width: 120px;      /* lebar minimal */
-    font-size: 8px;       /* font lebih kecil */
+    font-size: 8px;       /* sama dengan tabel */
     padding: 2px 4px;      /* padding minimal */
     height: 28px;          /* tinggi konsisten */
     line-height: 24px;     /* teks vertikal center */
@@ -104,7 +113,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   table {
     width: 100%;
     table-layout: fixed;    /* lebar kolom bisa diatur */
-    font-size: 8px;        /* lebih kecil di mobile */
+    font-size: 8px;        /* sama dengan filter/label */
     border-collapse: collapse;
   }
 
@@ -121,7 +130,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   th.nama-barang, td.nama-barang { width: 35%; }
   th.jumlah-masuk, td.jumlah-masuk { width: 12%; text-align:right; }
   th.jumlah-keluar, td.jumlah-keluar { width: 12%; text-align:right; }
-  th.stok, td.stok { width: 7%; text-align:right; } /* kolom stok menyesuaikan */
+  th.stok, td.stok { width: 12%; text-align:right; } /* kolom stok menyesuaikan */
   th.keterangan, td.keterangan { width: 14%; }
 
   /* Padding khusus */
@@ -133,8 +142,6 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     overflow-x: auto;
   }
 }
-
-
 
 </style>
 </head>
@@ -465,4 +472,5 @@ autoReload();
 </script>
 </body>
 </html>
+
 
