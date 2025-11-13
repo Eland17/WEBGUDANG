@@ -73,22 +73,23 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   .marquee-info { font-size:8px; padding:4px 8px; }
 }
 @media(max-width:768px){
+  /* === FILTERS === */
   .filters {
     display: flex;
     flex-direction: column; /* tetap vertikal */
-    gap: 3px;               /* jarak antar kolom sama */
+    gap: 3px;               /* jarak antar filter */
     align-items: stretch;   /* semua kolom sama lebar */
   }
 
-  /* Semua input/select/button filter punya ukuran sama */
   .filters input[type="text"],
   .filters input[type="date"],
   .filters select,
+  .filters button,
   #btnExportExcel {
-    width: 100%;           /* semua kolom sama lebar (full container) */
-    max-width: 220px;      /* lebar maksimal supaya rapi */
-    min-width: 120px;      /* lebar minimal supaya tidak terlalu sempit */
-    font-size: 8px;       /* lebih kecil */
+    width: 100%;           /* semua kolom sama lebar */
+    max-width: 220px;      /* lebar maksimal */
+    min-width: 120px;      /* lebar minimal */
+    font-size: 8px;       /* font lebih kecil */
     padding: 2px 4px;      /* padding minimal */
     height: 28px;          /* tinggi konsisten */
     line-height: 24px;     /* teks vertikal center */
@@ -99,15 +100,38 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     min-height: 28px;
   }
 
-  /* Tabel menyesuaikan font & padding agar selaras */
-  table { 
-    font-size: 8px; 
-    min-width: 0; 
-    width: 100%; 
+  /* === TABEL === */
+  table {
+    width: 100%;
+    table-layout: fixed;    /* lebar kolom bisa diatur */
+    font-size: 8px;        /* lebih kecil di mobile */
+    border-collapse: collapse;
   }
-  th, td { padding: 4px 3px; }
+
+  th, td {
+    padding: 4px 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  /* Atur lebar kolom agar proporsional */
+  th.kode-barang, td.kode-barang { width: 15%; }
+  th.nama-barang, td.nama-barang { width: 35%; }
+  th.jumlah-masuk, td.jumlah-masuk { width: 12%; text-align:right; }
+  th.jumlah-keluar, td.jumlah-keluar { width: 12%; text-align:right; }
+  th.stok, td.stok { width: 12%; text-align:right; } /* kolom stok menyesuaikan */
+  th.keterangan, td.keterangan { width: 14%; }
+
+  /* Padding khusus */
   td.nama-barang { padding-left: 3px; }
-  td.angka-kanan { padding-right: 3px; }
+  td.angka-kanan { padding-right: 3px; text-align:right; }
+
+  /* Opsional: scroll horizontal jika layar terlalu sempit */
+  .table-wrapper {
+    overflow-x: auto;
+  }
 }
 
 
