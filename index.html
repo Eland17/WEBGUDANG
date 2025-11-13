@@ -17,7 +17,8 @@
 * { box-sizing: border-box; }
 body, html { margin:0; padding:0; font-family: Arial,sans-serif; height:100vh; display:flex; flex-direction:column; }
 .wrapper { min-height:100vh; display:flex; flex-direction:column; flex-grow:1; }
-header { background:#1e90ff; color:white; text-align:center; padding:0; height:120px; line-height:120px; font-size:32px; font-weight:bold; user-select:none; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+header { background:#1e90ff; color:white; text-align:center; padding:0; height:120px; line-height:120px; font-size:32px; font-weight:bold; user-select:none; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); position:relative; }
+#autoRefreshIndicator { position:absolute; top:15px; right:20px; width:16px; height:16px; border-radius:50%; background:#ccc; box-shadow:0 0 5px rgba(0,0,0,0.2); }
 .main-content { display:flex; flex:1; overflow:hidden; min-height:0; position:relative; }
 .sidebar { background:#333; width:220px; padding:20px; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; transition: transform 0.3s ease; }
 .sidebar a, .sidebar button { background:#444; color:white; text-decoration:none; border:none; padding:12px 15px; margin-bottom:10px; border-radius:5px; text-align:left; cursor:pointer; font-size:16px; transition:0.3s; }
@@ -73,39 +74,6 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   .sidebar.open { transform:translateX(0); }
   .content { margin-left:0; }
 }
-.filters {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Semua input/select/button filter */
-.filters input,
-.filters select,
-#btnExportExcel {
-  box-sizing: border-box;
-  height: 36px;          
-  line-height: 36px;     
-  padding: 0 8px;
-  font-size: 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  flex: 1 1 150px;
-  max-width: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Reset default browser styling select */
-.filters select {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
 /* Tombol export */
 #btnExportExcel {
   flex: 1 1 100px;
@@ -139,7 +107,10 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 </head>
 <body>
 <div class="wrapper">
-  <header>Inventory Gudang</header>
+  <header>
+    Inventory Gudang
+    <div id="autoRefreshIndicator"></div>
+  </header>
   <button id="toggleSidebar">☰</button>
 
   <div class="main-content">
@@ -153,8 +124,6 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
     </nav>
 
     <main class="content" id="mainContent">
-      <div id="autoRefreshIndicator" style="position:absolute; top:10px; right:20px; width:12px; height:12px; border-radius:50%; background:#ccc; box-shadow:0 0 5px rgba(0,0,0,0.2);"></div>
-
       <div class="filters">
         <input type="text" id="filterKodeBarang" placeholder="Kode Barang" />
         <select id="filterKodeBuyer"></select>
@@ -224,12 +193,12 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 </div>
 
 <script>
-// ================== Sidebar toggle mobile ==================
+// Sidebar toggle mobile
 const toggleSidebarBtn = document.getElementById("toggleSidebar");
 const sidebar = document.getElementById("sidebar");
 toggleSidebarBtn.addEventListener("click", ()=> sidebar.classList.toggle("open"));
 
-// ================== Firebase Init ==================
+// Firebase Init
 const firebaseConfig = {
   apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
   authDomain: "inventory-gudang-16dfe.firebaseapp.com",
@@ -242,11 +211,11 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ================== Auth ==================
+// Auth
 auth.onAuthStateChanged(user => { if(!user) window.location.href='login.html'; });
 document.getElementById('btnLogout').addEventListener('click', ()=>{ auth.signOut().then(()=>window.location.href='login.html'); });
 
-// ================== Modal Kartu Stok ==================
+// Modal Kartu Stok
 const modalKartu = document.getElementById("modalKartuStok");
 const tbodyKartuStok = document.getElementById("tbodyKartuStok");
 const judulKartuStok = document.getElementById("judulKartuStok");
@@ -315,7 +284,7 @@ function renderKartuStok(){
 document.getElementById("filterTanggalDariModal").addEventListener("change", renderKartuStok);
 document.getElementById("filterTanggalSampaiModal").addEventListener("change", renderKartuStok);
 
-document.getElementById("btnPrintKartu").addEventListener("click", ()=>{
+document.getElementById("btnPrintKartu").addEventListener("click", ()=>{ 
   const judul = document.getElementById("judulKartuStok").textContent;
   const tableHTML = document.querySelector("#modalKartuStok table").outerHTML;
   const w = window.open("", "_blank");
@@ -331,10 +300,13 @@ document.getElementById("btnPrintKartu").addEventListener("click", ()=>{
   w.print();
 });
 
-// ================== Inventory ==================
+// Inventory
 let inventoryData = [];
 let currentPage = 1;
-const rowsPerPage = 20;
+let rowsPerPageDesktop = 20;
+let rowsPerPageMobile = 10;
+
+function getRowsPerPage(){ return window.innerWidth<=768 ? rowsPerPageMobile : rowsPerPageDesktop; }
 
 async function loadInventory(){
   const masukSnap = await db.collection("barangMasuk").get();
@@ -353,105 +325,101 @@ async function loadInventory(){
     tempData[d.kode_barang].keluar += d.jumlah||0;
   });
 
-  inventoryData = Object.values(tempData).map(r=>({...r, stok:(r.masuk||0)-(r.keluar||0)}))
-                    .sort((a,b)=>a.kode_barang.localeCompare(b.kode_barang));
+  inventoryData = Object.values(tempData).map(d=>{
+    d.stok = d.masuk - d.keluar;
+    return d;
+  }).sort((a,b)=> a.kode_barang.localeCompare(b.kode_barang));
 
-  populateBuyerDropdown();
   renderInventory();
+  loadBuyerDropdown(); // update dropdown
 }
-
-function populateBuyerDropdown(){
-  const buyerSelect = document.getElementById("filterKodeBuyer");
-  const buyers = [...new Set(inventoryData.map(r=>r.kode_buyer).filter(b=>b && b.trim()!==""))].sort();
-  buyerSelect.innerHTML = `<option value="">Semua Buyer</option>`;
-  buyers.forEach(b=>buyerSelect.innerHTML+=`<option value="${b}">${b}</option>`);
-}
-
-document.getElementById("btnExportExcel").addEventListener("click", ()=>{
-  if(inventoryData.length===0){ alert("Data belum tersedia."); return; }
-  const ws_data = [["Kode Barang","Kode Buyer","Nama Barang","Satuan","Stok Tersisa"]];
-  inventoryData.forEach(r=>ws_data.push([r.kode_barang,r.kode_buyer,r.nama_barang,r.satuan,r.stok]));
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-  XLSX.writeFile(wb, "Inventory_Gudang.xlsx");
-});
 
 function renderInventory(){
-  const tbody=document.querySelector("#tabelInventory tbody");
-  const kode=document.getElementById("filterKodeBarang").value.toLowerCase();
-  const buyer=document.getElementById("filterKodeBuyer").value.toLowerCase();
-  const nama=document.getElementById("filterNamaBarang").value.toLowerCase();
-  let filtered=inventoryData.filter(r=>{
-    return r.kode_barang.toLowerCase().includes(kode) && 
-           r.kode_buyer.toLowerCase().includes(buyer) &&
-           r.nama_barang.toLowerCase().includes(nama);
+  const filterKode = document.getElementById("filterKodeBarang").value.toLowerCase();
+  const filterBuyer = document.getElementById("filterKodeBuyer").value;
+  const filterNama = document.getElementById("filterNamaBarang").value.toLowerCase();
+  const tbody = document.querySelector("#tabelInventory tbody");
+  tbody.innerHTML="";
+
+  let filtered = inventoryData.filter(d=>{
+    return d.kode_barang.toLowerCase().includes(filterKode) &&
+           (filterBuyer==="" || d.kode_buyer===filterBuyer) &&
+           d.nama_barang.toLowerCase().includes(filterNama);
   });
 
-  const totalPages=Math.ceil(filtered.length/rowsPerPage);
+  let totalPages = Math.ceil(filtered.length/getRowsPerPage());
   if(currentPage>totalPages) currentPage=totalPages||1;
-  const start=(currentPage-1)*rowsPerPage;
-  const end=start+rowsPerPage;
-  const paged=filtered.slice(start,end);
+  const start = (currentPage-1)*getRowsPerPage();
+  const end = start+getRowsPerPage();
+  const pageData = filtered.slice(start,end);
 
-  tbody.innerHTML="";
-  paged.forEach(r=>{
+  pageData.forEach(d=>{
     let saldoClass="";
-    if(r.stok===0) saldoClass="saldo-nol";
-    else if(r.stok<=5) saldoClass="saldo-rendah";
+    if(d.stok===0) saldoClass="saldo-nol";
+    else if(d.stok<=5) saldoClass="saldo-rendah";
 
-    tbody.innerHTML+=`<tr>
-      <td>${r.kode_barang}</td>
-      <td>${r.kode_buyer}</td>
-      <td class="nama-barang">${r.nama_barang}</td>
-      <td>${r.satuan}</td>
-      <td class="angka-kanan ${saldoClass}">${r.stok.toLocaleString("id-ID")}</td>
-      <td><button onclick="bukaKartuStok('${r.kode_barang}','${r.nama_barang}')">Kartu Stok</button></td>
+    tbody.innerHTML += `<tr>
+      <td>${d.kode_barang}</td>
+      <td>${d.kode_buyer}</td>
+      <td class="nama-barang">${d.nama_barang}</td>
+      <td>${d.satuan}</td>
+      <td class="angka-kanan ${saldoClass}">${d.stok.toLocaleString("id-ID")}</td>
+      <td><button onclick="bukaKartuStok('${d.kode_barang}','${d.nama_barang}')">Kartu Stok</button></td>
     </tr>`;
   });
-  document.getElementById("pageInfo").textContent=`Halaman ${currentPage} dari ${totalPages||1}`;
-  document.getElementById("prevPage").disabled=currentPage<=1;
-  document.getElementById("nextPage").disabled=currentPage>=totalPages;
+
+  document.getElementById("pageInfo").textContent = `Halaman ${currentPage} dari ${totalPages||1}`;
+  document.getElementById("prevPage").disabled = currentPage<=1;
+  document.getElementById("nextPage").disabled = currentPage>=totalPages;
 }
 
-document.getElementById("prevPage").addEventListener("click",()=>{ currentPage--; renderInventory(); });
-document.getElementById("nextPage").addEventListener("click",()=>{ currentPage++; renderInventory(); });
-document.getElementById("filterKodeBarang").addEventListener("input",()=>{ currentPage=1; renderInventory(); });
-document.getElementById("filterKodeBuyer").addEventListener("change",()=>{ currentPage=1; renderInventory(); });
-document.getElementById("filterNamaBarang").addEventListener("input",()=>{ currentPage=1; renderInventory(); });
+// Pagination
+document.getElementById("prevPage").addEventListener("click", ()=>{ currentPage--; renderInventory(); });
+document.getElementById("nextPage").addEventListener("click", ()=>{ currentPage++; renderInventory(); });
 
-// ================== Auto Reload with Indicator ==================
-const indicator=document.getElementById("autoRefreshIndicator");
-let indicatorOn=false;
-setInterval(()=>{ 
-  indicator.style.background=indicatorOn?"#28a745":"#ccc"; 
-  indicatorOn=!indicatorOn; 
-},500);
+// Filters
+document.getElementById("filterKodeBarang").addEventListener("input", ()=>{ currentPage=1; renderInventory(); });
+document.getElementById("filterKodeBuyer").addEventListener("change", ()=>{ currentPage=1; renderInventory(); });
+document.getElementById("filterNamaBarang").addEventListener("input", ()=>{ currentPage=1; renderInventory(); });
 
-// Auto-reload data setiap 3 detik tanpa merusak filter
-async function autoReload(){
-  try {
-    const kodeFilter=document.getElementById("filterKodeBarang").value;
-    const buyerFilter=document.getElementById("filterKodeBuyer").value;
-    const namaFilter=document.getElementById("filterNamaBarang").value;
-    const savedPage=currentPage;
-
-    await loadInventory();
-
-    document.getElementById("filterKodeBarang").value=kodeFilter;
-    document.getElementById("filterKodeBuyer").value=buyerFilter;
-    document.getElementById("filterNamaBarang").value=namaFilter;
-    currentPage=savedPage;
-
-    renderInventory();
-  } catch(err){
-    console.error("Reload error:", err);
-  } finally {
-    setTimeout(autoReload, 3000);
-  }
+// Auto-refresh indicator
+const indicator = document.getElementById("autoRefreshIndicator");
+function blinkIndicator(){
+  indicator.style.background="#28a745";
+  setTimeout(()=>indicator.style.background="#ccc",500);
 }
 
-autoReload();
+// Export Excel
+document.getElementById("btnExportExcel").addEventListener("click", ()=>{
+  const table = document.getElementById("tabelInventory");
+  const wb = XLSX.utils.table_to_book(table,{sheet:"Inventory"});
+  XLSX.writeFile(wb,"InventoryGudang.xlsx");
+});
+
+// Load buyer dropdown hanya dari barangMasuk
+async function loadBuyerDropdown(){
+  const buyersSet = new Set();
+  const masukSnap = await db.collection("barangMasuk").get();
+  masukSnap.forEach(doc => {
+    const d = doc.data();
+    if(d.kode_buyer) buyersSet.add(d.kode_buyer);
+  });
+
+  const filterBuyer = document.getElementById("filterKodeBuyer");
+  filterBuyer.innerHTML = `<option value="">Semua Buyer</option>`;
+  Array.from(buyersSet).sort().forEach(buyer => {
+    const opt = document.createElement("option");
+    opt.value = buyer;
+    opt.textContent = buyer;
+    filterBuyer.appendChild(opt);
+  });
+}
+
+
+loadInventory();
+
+// Auto refresh setiap 2 detik
+setInterval(()=>{ loadInventory(); blinkIndicator(); },2000);
 </script>
 </body>
 </html>
