@@ -28,7 +28,7 @@ header { background:#1e90ff; color:white; text-align:center; padding:0; height:1
 .filters input[type="text"], .filters input[type="date"], .filters select { padding:7px 10px; border-radius:4px; border:1px solid #ccc; font-size:14px; }
 #filterKodeBarang { width:300px; }
 #filterKodeBuyer { width:200px; }
-#filterNamaBarang { width:450px; } /* lebih lebar */
+#filterNamaBarang { width:450px; } 
 #btnExportExcel { background:#28a745; color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; transition:0.3s; }
 #btnExportExcel:hover { background:#218838; }
 table { width:100%; min-width:700px; border-collapse:collapse; background:#fff; box-shadow:0 0 5px rgba(0,0,0,0.1); table-layout:auto; }
@@ -49,7 +49,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
 /* Modal kartu stok */
 #modalKartuStok { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center; }
 #modalKartuStok .modal-content { background:#fff; padding:20px; border-radius:8px; width:95%; max-width:1000px; max-height:90vh; overflow:auto; }
-#modalKartuStok table { width:100%; border-collapse:collapse; margin-top:10px; table-layout:auto; min-width:700px; font-family:monospace; }
+#modalKartuStok table { width:100%; border-collapse:collapse; margin-top:10px; table-layout:auto; font-family:monospace; }
 #modalKartuStok th, #modalKartuStok td { border:1px solid #333; padding:6px; text-align:center; }
 #modalKartuStok th { background:#1e90ff; color:white; }
 
@@ -73,35 +73,6 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
   .sidebar { position:fixed; top:60px; left:0; width:200px; transform:translateX(-100%); z-index:999; height:calc(100% - 60px); }
   .sidebar.open { transform:translateX(0); }
   .content { margin-left:0; }
-}
-/* Tombol export */
-#btnExportExcel {
-  flex: 1 1 100px;
-  max-width: 120px;
-  height: 36px;
-  line-height: 36px;
-  padding: 0 12px;
-  cursor: pointer;
-  background:#28a745;
-  color:white;
-  border:none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Mobile */
-@media(max-width:768px){
-  .filters input,
-  .filters select,
-  #btnExportExcel {
-    flex: 1 1 100px;
-    max-width: 100%;
-    font-size: 10px;
-    height: 28px;
-    line-height: 28px;
-    padding: 0 4px;
-  }
 }
 </style>
 </head>
@@ -331,30 +302,31 @@ async function loadInventory(){
   }).sort((a,b)=> a.kode_barang.localeCompare(b.kode_barang));
 
   renderInventory();
-  loadBuyerDropdown(); // update dropdown
 }
 
 function renderInventory(){
-  const filterKode = document.getElementById("filterKodeBarang").value.toLowerCase();
-  const filterBuyer = document.getElementById("filterKodeBuyer").value;
-  const filterNama = document.getElementById("filterNamaBarang").value.toLowerCase();
+  const filterKodeBarang = document.getElementById("filterKodeBarang").value.toLowerCase();
+  const filterKodeBuyer = document.getElementById("filterKodeBuyer").value;
+  const filterNamaBarang = document.getElementById("filterNamaBarang").value.toLowerCase();
+
+  let filtered = inventoryData.filter(d=>{
+    return d.kode_barang.toLowerCase().includes(filterKodeBarang) &&
+           (filterKodeBuyer==="" || d.kode_buyer===filterKodeBuyer) &&
+           d.nama_barang.toLowerCase().includes(filterNamaBarang);
+  });
+
   const tbody = document.querySelector("#tabelInventory tbody");
   tbody.innerHTML="";
 
-  let filtered = inventoryData.filter(d=>{
-    return d.kode_barang.toLowerCase().includes(filterKode) &&
-           (filterBuyer==="" || d.kode_buyer===filterBuyer) &&
-           d.nama_barang.toLowerCase().includes(filterNama);
-  });
-
-  let totalPages = Math.ceil(filtered.length/getRowsPerPage());
-  if(currentPage>totalPages) currentPage=totalPages||1;
-  const start = (currentPage-1)*getRowsPerPage();
-  const end = start+getRowsPerPage();
+  const rowsPerPage = getRowsPerPage();
+  const totalPages = Math.ceil(filtered.length/rowsPerPage);
+  if(currentPage>totalPages) currentPage = totalPages || 1;
+  const start = (currentPage-1)*rowsPerPage;
+  const end = start + rowsPerPage;
   const pageData = filtered.slice(start,end);
 
   pageData.forEach(d=>{
-    let saldoClass="";
+    let saldoClass = "";
     if(d.stok===0) saldoClass="saldo-nol";
     else if(d.stok<=5) saldoClass="saldo-rendah";
 
@@ -379,47 +351,38 @@ document.getElementById("nextPage").addEventListener("click", ()=>{ currentPage+
 
 // Filters
 document.getElementById("filterKodeBarang").addEventListener("input", ()=>{ currentPage=1; renderInventory(); });
-document.getElementById("filterKodeBuyer").addEventListener("change", ()=>{ currentPage=1; renderInventory(); });
 document.getElementById("filterNamaBarang").addEventListener("input", ()=>{ currentPage=1; renderInventory(); });
+document.getElementById("filterKodeBuyer").addEventListener("change", ()=>{ currentPage=1; renderInventory(); });
 
-// Auto-refresh indicator
-const indicator = document.getElementById("autoRefreshIndicator");
-function blinkIndicator(){
-  indicator.style.background="#28a745";
-  setTimeout(()=>indicator.style.background="#ccc",500);
+// Load dropdown buyers (only once)
+async function loadBuyerDropdown(){
+  const snap = await db.collection("barangMasuk").get();
+  const buyers = new Set();
+  snap.forEach(doc=>{ if(doc.data().kode_buyer) buyers.add(doc.data().kode_buyer); });
+  const select = document.getElementById("filterKodeBuyer");
+  select.innerHTML = `<option value="">All Buyer</option>` + Array.from(buyers).sort().map(b=>`<option value="${b}">${b}</option>`).join("");
 }
 
 // Export Excel
 document.getElementById("btnExportExcel").addEventListener("click", ()=>{
-  const table = document.getElementById("tabelInventory");
-  const wb = XLSX.utils.table_to_book(table,{sheet:"Inventory"});
-  XLSX.writeFile(wb,"InventoryGudang.xlsx");
+  const wb = XLSX.utils.book_new();
+  const ws_data = [["Kode Barang","Kode Buyer","Nama Barang","Satuan","Stok"]];
+  inventoryData.forEach(d=>ws_data.push([d.kode_barang,d.kode_buyer,d.nama_barang,d.satuan,d.stok]));
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+  XLSX.writeFile(wb, `InventoryGudang.xlsx`);
 });
 
-// Load buyer dropdown hanya dari barangMasuk
-async function loadBuyerDropdown(){
-  const buyersSet = new Set();
-  const masukSnap = await db.collection("barangMasuk").get();
-  masukSnap.forEach(doc => {
-    const d = doc.data();
-    if(d.kode_buyer) buyersSet.add(d.kode_buyer);
-  });
-
-  const filterBuyer = document.getElementById("filterKodeBuyer");
-  filterBuyer.innerHTML = `<option value="">Semua Buyer</option>`;
-  Array.from(buyersSet).sort().forEach(buyer => {
-    const opt = document.createElement("option");
-    opt.value = buyer;
-    opt.textContent = buyer;
-    filterBuyer.appendChild(opt);
-  });
-}
-
-
+// Auto-refresh every 30 detik
+loadBuyerDropdown(); // load dropdown only once
 loadInventory();
+setInterval(()=>{ 
+  document.getElementById("autoRefreshIndicator").style.background="#28a745";
+  loadInventory().finally(()=>{ setTimeout(()=>{ document.getElementById("autoRefreshIndicator").style.background="#ccc"; },500); });
+}, 30000);
 
-// Auto refresh setiap 2 detik
-setInterval(()=>{ loadInventory(); blinkIndicator(); },2000);
+// Adjust rows per page on resize
+window.addEventListener("resize", renderInventory);
 </script>
 </body>
 </html>
