@@ -37,7 +37,7 @@ form {
 label { font-weight: 600; margin-bottom: 0.4rem; display: block; color: #222; font-size: 0.9rem; }
 .input-container { position: relative; margin-bottom: 1rem; }
 
-input[type="text"], input[type="number"], input[type="date"], select {
+input[type="text"], input[type="date"], select {
   width: 100%; padding: 0.6rem 0.8rem; border: 1.8px solid #a3bffa;
   border-radius: 6px; font-size: 0.9rem; color: #222;
 }
@@ -82,7 +82,7 @@ button:hover { background: #2c51d9; }
 .close-btn { position: relative; top: 0; right: 0; float: right; margin-bottom: 10px; }
 .close-btn:hover { color: #000; }
 
-/* Tombol kalkulator kecil untuk mobile */
+/* Mobile */
 .btn-calc { display: none; }
 @media (max-width: 738px) {
   .btn-calc {
@@ -99,13 +99,11 @@ button:hover { background: #2c51d9; }
   button { width: 100%; font-size: 0.85rem; padding: 0.5rem; }
   #calculatorPanel { position: static; width: 100%; margin-top: 1rem; right: auto; }
   .jumlah-container { flex-direction: column; }
-  .jumlah-container > div { flex-direction: column; align-items: stretch; }
-  .jumlah-container label { display: block; margin-bottom: 0.3rem; width: 100%; }
-  .jumlah-container input { width: 100%; }
 }
 </style>
 </head>
 <body>
+
 <form id="formMasuk" autocomplete="off">
   <h2>Barang Masuk</h2>
 
@@ -144,7 +142,7 @@ button:hover { background: #2c51d9; }
     <div style="flex:1; display:flex; flex-direction: column;">
       <label for="jumlah">Jumlah</label>
       <div style="display:flex; align-items:center; gap:5px;">
-        <input type="number" id="jumlah" name="jumlah" required min="1" style="flex:4;" />
+        <input type="text" id="jumlah" name="jumlah" required style="flex:4;" />
         <button type="button" class="btn-calc" id="toggleCalc" style="flex:1; max-width:50px;">Calc</button>
       </div>
     </div>
@@ -166,12 +164,13 @@ button:hover { background: #2c51d9; }
 
   <div class="btn-container">
     <button type="submit">Simpan</button>
-    <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali ke Dashboard</button>
+    <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali</button>
   </div>
 </form>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
@@ -183,6 +182,27 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+/* ============================
+   Fungsi konversi angka (koma/titik)
+   ============================ */
+function convertToNumber(value) {
+  if (!value) return 0;
+  value = value.toString().trim();
+
+  if (value.includes(",") && value.includes(".")) {
+    if (value.lastIndexOf(",") > value.lastIndexOf(".")) {
+      value = value.replace(/\./g, "").replace(",", ".");
+    } else {
+      value = value.replace(/,/g, "");
+    }
+  }
+  else if (value.includes(",")) {
+    value = value.replace(",", ".");
+  }
+
+  return parseFloat(value) || 0;
+}
 
 let barangMap = new Map(), buyerSet = new Set();
 async function loadDataFromFirestore() {
@@ -197,6 +217,7 @@ async function loadDataFromFirestore() {
 }
 loadDataFromFirestore();
 
+/* Auto Suggest */
 const inputKode = document.getElementById("kode_barang"),
       inputNama = document.getElementById("nama_barang"),
       inputBuyer = document.getElementById("kode_buyer");
@@ -251,6 +272,9 @@ document.addEventListener("click", e => {
   }
 });
 
+/* ---------------------------
+   Kalkulator Panel
+----------------------------*/
 const form = document.getElementById("formMasuk");
 const calculatorPanel = document.getElementById("calculatorPanel");
 const calculatorBody = document.getElementById("calculatorBody");
@@ -263,7 +287,7 @@ for (let r = 0; r < 5; r++) {
   for (let c = 0; c < 4; c++) {
     const td = document.createElement("td");
     const input = document.createElement("input");
-    input.type = "number"; input.className = "angka";
+    input.type = "text"; input.className = "angka";
     td.appendChild(input); tr.appendChild(td);
   }
   calculatorBody.appendChild(tr);
@@ -273,10 +297,18 @@ const inputs = document.querySelectorAll("#calculatorPanel .angka");
 const totalEl = document.getElementById("totalCalc");
 const jumlahEl = document.getElementById("jumlahCalc");
 
+/* Perhitungan kalkulator */
 function hitungOtomatis() {
   let total = 0, count = 0;
-  inputs.forEach(i => { const v = parseFloat(i.value); if (!isNaN(v)) { total += v; count++; } });
-  jumlahEl.textContent = count; totalEl.textContent = total.toFixed(2);
+  inputs.forEach(i => {
+    const v = convertToNumber(i.value);
+    if (!isNaN(v) && v !== 0) {
+      total += v;
+      count++;
+    }
+  });
+  jumlahEl.textContent = count;
+  totalEl.textContent = total.toFixed(2);
 }
 
 calculatorPanel.addEventListener("input", hitungOtomatis);
@@ -284,19 +316,36 @@ calculatorPanel.addEventListener("input", hitungOtomatis);
 toggleCalc.addEventListener("click", () => {
   calculatorPanel.style.display = calculatorPanel.style.display === "none" ? "block" : "none";
 });
-closeCalc.addEventListener("click", () => { calculatorPanel.style.display = "none"; });
-inputJumlah.addEventListener("focus", () => { if(window.innerWidth>768) calculatorPanel.style.display = "block"; });
 
+closeCalc.addEventListener("click", () => {
+  calculatorPanel.style.display = "none";
+});
+
+inputJumlah.addEventListener("focus", () => {
+  if (window.innerWidth > 768) calculatorPanel.style.display = "block";
+});
+
+/* ---------------------------
+   SUBMIT → SIMPAN FIREBASE
+----------------------------*/
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(form).entries());
-  data.jumlah = Number(data.jumlah);
-  await db.collection("barangMasuk").add({ ...data, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-  alert("Data berhasil disimpan ke Firebase.");
+
+  data.jumlah = convertToNumber(data.jumlah);  // FIX KOMA & TITIK
+  data.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+
+  await db.collection("barangMasuk").add(data);
+
+  alert("Data berhasil disimpan.");
+
   form.reset();
-  inputs.forEach(i=>i.value=""); jumlahEl.textContent="0"; totalEl.textContent="0"; calculatorPanel.style.display="none";
+  inputs.forEach(i => i.value = "");
+  jumlahEl.textContent = "0";
+  totalEl.textContent = "0";
+  calculatorPanel.style.display = "none";
 });
 </script>
+
 </body>
 </html>
-
