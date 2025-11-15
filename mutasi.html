@@ -21,19 +21,22 @@
             margin-top: 0;
         }
         .sidebar a, .sidebar button {
-            display: block;
-            margin: 10px 0;
-            background: #495057;
-            color: white;
-            padding: 8px 12px;
-            text-decoration: none;
-            border: none;
-            text-align: left;
-            cursor: pointer;
-            font-size: 12px;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-        }
+    display: block;
+    width: 100%;          /* ➜ Semua elemen sama lebar */
+    margin: 10px 0;
+    background: #495057;
+    color: white;
+    padding: 8px 12px;
+    text-decoration: none;
+    border: none;
+    text-align: left;     /* ➜ Teks kiri */
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+    box-sizing: border-box; /* ➜ Lebar konsisten walau diberi padding */
+}
+
         .sidebar button:hover, .sidebar a:hover {
             background: #6c757d;
         }
@@ -780,6 +783,7 @@
     </script>
 </body>
 </html>
+
 
 
 
