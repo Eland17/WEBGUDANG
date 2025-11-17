@@ -209,6 +209,7 @@ button:hover { background: #2c51d9; }
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 <script>
+// ===== Firebase Init =====
 const firebaseConfig = {
   apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
   authDomain: "inventory-gudang-16dfe.firebaseapp.com",
@@ -220,7 +221,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ===== Data & Autocomplete =====
 let barangMap = new Map(), buyerSet = new Set(), keteranganSet = new Set();
+
 async function loadDataFromFirestore() {
   const masukSnap = await db.collection("barangMasuk").get();
   const keluarSnap = await db.collection("barangKeluar").get();
@@ -295,20 +298,13 @@ document.addEventListener("click", e => {
   }
 });
 
-async function getTotalStok(kode_barang) {
-  const masuk = await db.collection("barangMasuk").where("kode_barang", "==", kode_barang).get();
-  const keluar = await db.collection("barangKeluar").where("kode_barang", "==", kode_barang).get();
-  const totalMasuk = masuk.docs.reduce((sum, d) => sum + Number(d.data().jumlah || 0), 0);
-  const totalKeluar = keluar.docs.reduce((sum, d) => sum + Number(d.data().jumlah || 0), 0);
-  return totalMasuk - totalKeluar;
-}
-
-// Kalkulator tetap sama
-const form = document.getElementById("formKeluar");
+// ===== Kalkulator =====
 const calculatorPanel = document.getElementById("calculatorPanel");
 const calculatorBody = document.getElementById("calculatorBody");
 const closeCalc = document.getElementById("closeCalc");
 const toggleCalc = document.getElementById("toggleCalc");
+const totalEl = document.getElementById("totalCalc");
+const jumlahEl = document.getElementById("jumlahCalc");
 
 for (let r = 0; r < 5; r++) {
   const tr = document.createElement("tr");
@@ -322,21 +318,36 @@ for (let r = 0; r < 5; r++) {
 }
 
 const inputs = document.querySelectorAll("#calculatorPanel .angka");
-const totalEl = document.getElementById("totalCalc");
-const jumlahEl = document.getElementById("jumlahCalc");
-
 function hitungOtomatis() {
   let total = 0, count = 0;
   inputs.forEach(i => { const v = parseFloat(i.value); if (!isNaN(v)) { total += v; count++; } });
   jumlahEl.textContent = count; totalEl.textContent = total.toFixed(2);
 }
-
 calculatorPanel.addEventListener("input", hitungOtomatis);
 toggleCalc.addEventListener("click", () => { calculatorPanel.style.display = calculatorPanel.style.display === "none" ? "block" : "none"; });
 closeCalc.addEventListener("click", () => { calculatorPanel.style.display = "none"; });
 inputJumlah.addEventListener("focus", () => { if (window.innerWidth > 768) calculatorPanel.style.display = "block"; });
 
-// --- MODIFIKASI BAGI TITIK / KOMA ---
+// ===== Helper =====
+async function getTotalStok(kode_barang) {
+  const masuk = await db.collection("barangMasuk").where("kode_barang", "==", kode_barang).get();
+  const keluar = await db.collection("barangKeluar").where("kode_barang", "==", kode_barang).get();
+  const totalMasuk = masuk.docs.reduce((sum, d) => sum + Number(d.data().jumlah || 0), 0);
+  const totalKeluar = keluar.docs.reduce((sum, d) => sum + Number(d.data().jumlah || 0), 0);
+  return totalMasuk - totalKeluar;
+}
+
+async function isDuplicate(kode, buyer, tanggal) {
+  const snap = await db.collection("barangKeluar")
+      .where("kode_barang","==",kode)
+      .where("kode_buyer","==",buyer)
+      .where("tanggal","==",tanggal)
+      .get();
+  return !snap.empty;
+}
+
+// ===== Submit Form =====
+const form = document.getElementById("formKeluar");
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(form).entries());
@@ -345,9 +356,15 @@ form.addEventListener("submit", async e => {
   data.jumlah = parseFloat(data.jumlah.replace(",", "."));
   if(isNaN(data.jumlah) || data.jumlah <= 0) return alert("Jumlah tidak valid!");
 
+  // cek stok
   const stok = await getTotalStok(data.kode_barang);
   if (data.jumlah > stok) return alert(`Stok tidak cukup!\nStok tersedia: ${stok}\nJumlah keluar: ${data.jumlah}`);
 
+  // cek duplikasi
+  const duplicate = await isDuplicate(data.kode_barang, data.kode_buyer, data.tanggal);
+  if(duplicate) return alert("Data ini sudah pernah dicatat!\nDuplikasi otomatis dicegah.");
+
+  // simpan ke Firestore
   await db.collection("barangKeluar").add({...data, timestamp: firebase.firestore.FieldValue.serverTimestamp()});
   alert("Data berhasil disimpan ke Firebase.");
 
@@ -357,6 +374,7 @@ form.addEventListener("submit", async e => {
   totalEl.textContent = "0";
   calculatorPanel.style.display = "none";
 });
+
 </script>
 </body>
 </html>
