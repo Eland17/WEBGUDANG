@@ -80,12 +80,6 @@ button:hover { background: #2c51d9; }
   align-items: flex-start;
   gap: 1rem;
 }
-.jumlah-container input[type="text"],
-.jumlah-container input[type="number"] {
-  flex: 1;
-  min-width: 200px;
-}
-
 
 #calculatorPanel {
   position: absolute;
@@ -182,7 +176,7 @@ button:hover { background: #2c51d9; }
     <div style="flex:1; display:flex; flex-direction: column;">
       <label for="jumlah">Jumlah</label>
       <div style="display:flex; align-items:center; gap:5px;">
-        <input type="text" id="jumlah" name="jumlah" required style="flex:7;" placeholder=""/>
+        <input type="text" id="jumlah" name="jumlah" required style="flex:4;" placeholder=""/>
         <button type="button" class="btn-calc" id="toggleCalc" style="flex:1; max-width:50px;">Calc</button>
       </div>
     </div>
@@ -208,7 +202,7 @@ button:hover { background: #2c51d9; }
 
   <div class="btn-container">
     <button type="submit">Simpan</button>
-    <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali</button>
+    <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali ke Dashboard</button>
   </div>
 </form>
 
@@ -366,4 +360,3 @@ form.addEventListener("submit", async e => {
 </script>
 </body>
 </html>
-
