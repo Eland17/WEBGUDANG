@@ -366,8 +366,9 @@ form.addEventListener("submit", async e => {
   if (data.jumlah > stok) return alert(`Stok tidak cukup!\nStok tersedia: ${stok}\nJumlah keluar: ${data.jumlah}`);
 
   // cek duplikasi
-  const duplicate = await isDuplicate(data.kode_barang, data.kode_buyer, data.tanggal);
+  const duplicate = await isDuplicate(data);
   if(duplicate) return alert("Data ini sudah pernah dicatat!\nDuplikasi otomatis dicegah.");
+
 
   // simpan ke Firestore
   await db.collection("barangKeluar").add({...data, timestamp: firebase.firestore.FieldValue.serverTimestamp()});
@@ -383,4 +384,5 @@ form.addEventListener("submit", async e => {
 </script>
 </body>
 </html>
+
 
