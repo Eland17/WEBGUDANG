@@ -337,14 +337,19 @@ async function getTotalStok(kode_barang) {
   return totalMasuk - totalKeluar;
 }
 
-async function isDuplicate(kode, buyer, tanggal) {
+async function isDuplicate(data) {
   const snap = await db.collection("barangKeluar")
-      .where("kode_barang","==",kode)
-      .where("kode_buyer","==",buyer)
-      .where("tanggal","==",tanggal)
-      .get();
+    .where("kode_barang", "==", data.kode_barang)
+    .where("kode_buyer", "==", data.kode_buyer)
+    .where("nama_barang", "==", data.nama_barang)
+    .where("jumlah", "==", data.jumlah)          // jumlah harus sama persis (0.01 beda sudah lolos)
+    .where("keterangan", "==", data.keterangan)
+    .where("tanggal", "==", data.tanggal)
+    .get();
+
   return !snap.empty;
 }
+
 
 // ===== Submit Form =====
 const form = document.getElementById("formKeluar");
@@ -378,3 +383,4 @@ form.addEventListener("submit", async e => {
 </script>
 </body>
 </html>
+
