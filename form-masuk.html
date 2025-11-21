@@ -82,6 +82,27 @@ button:hover { background: #2c51d9; }
 .close-btn { position: relative; top: 0; right: 0; float: right; margin-bottom: 10px; }
 .close-btn:hover { color: #000; }
 
+/* Tambahan: Perbesar form khusus tampilan desktop */
+@media (min-width: 739px) {
+    form {
+        max-width: 750px;       /* dari 600px → 750px */
+        padding: 2rem;          /* padding sedikit diperbesar */
+        font-size: 1rem;        /* teks sedikit lebih besar */
+    }
+
+    input[type="text"], 
+    input[type="date"], 
+    select {
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+    }
+
+    h2 {
+        font-size: 1.35rem;
+    }
+}
+
+
 /* Mobile */
 .btn-calc { display: none; }
 @media (max-width: 738px) {
@@ -349,3 +370,4 @@ form.addEventListener("submit", async e => {
 
 </body>
 </html>
+
