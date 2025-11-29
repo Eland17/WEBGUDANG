@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PPM Data - Schedule PPM</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root{ --bg:#f6f8fb; --card:#ffffff; --muted:#6b7280; --accent:#0f63d2; }
+    *{box-sizing:border-box}
+    body{font-family:Inter,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); padding:20px; margin:0; color:#0b1220}
+    .container{max-width:980px; margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    h1{font-size:1.1rem;margin:0}
+    .card{background:var(--card);border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:14px}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+    th, td{padding:8px 10px;border-bottom:1px solid #edf2f7;text-align:left}
+    th{background:#fbfdff;position:sticky;top:0}
+    .actions button{padding:6px 8px;font-size:12px}
+    .muted{color:var(--muted);font-size:13px}
+
+    button{
+      background:var(--accent);
+      color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px
+    }
+    button.secondary{background:#6b7280}
+    button.danger{background:#dc2626}
+
+    .modal{
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,.45);display:flex;
+      justify-content:center;align-items:center;
+      padding:20px;z-index:999;display:none;
+    }
+    .modal-content{
+      background:#fff;width:100%;max-width:480px;
+      border-radius:12px;padding:20px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.15);
+      animation:pop .3s ease;
+    }
+    @keyframes pop{0%{transform:scale(.85);opacity:0;}100%{transform:scale(1);opacity:1;}}
+
+    .modal-header{
+      font-size:1rem;font-weight:600;margin-bottom:12px;
+      display:flex;justify-content:space-between;align-items:center;
+    }
+    .modal-close{
+      cursor:pointer;font-size:20px;font-weight:bold;color:#555;
+    }
+
+    .row{display:flex;gap:10px;margin-bottom:10px}
+    .col{flex:1}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input, select, textarea{
+      width:100%;padding:8px 10px;border:1px solid #e6e9ef;border-radius:8px;font-size:14px;
+    }
+    textarea{min-height:56px}
+
+    @media(max-width:700px){ .row{flex-direction:column} }
+
+    @media print{
+      .no-print{display:none!important}
+      body{background:#fff}
+      .card{box-shadow:none;border-radius:0}
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>PPM Data — Schedule PPM</h1>
+    <div class="muted no-print">Firestore Storage</div>
+  </header>
+
+  <div class="card">
+
+    <button class="no-print" onclick="openModal()">+ Tambah</button>
+
+    <div style="overflow:auto;margin-top:12px">
+      <table id="ppmTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Schedule PPM</th>
+            <th>Buyer</th>
+            <th>Style</th>
+            <th>Status</th>
+            <th>Issue</th>
+            <th class="no-print">Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="no-print" style="margin-top:10px;display:flex;gap:8px">
+      <button class="secondary" onclick="exportCSV()">Export CSV</button>
+      <button class="secondary" onclick="window.print()">Print</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- POPUP -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+
+    <div class="modal-header">
+      <span id="modalTitle">Tambah Data PPM</span>
+      <span class="modal-close" onclick="closeModal()">×</span>
+    </div>
+
+    <form id="ppmForm" onsubmit="return false;">
+      <div class="row">
+        <div class="col">
+          <label>Schedule PPM</label>
+          <input type="date" id="tgl" required>
+        </div>
+        <div class="col">
+          <label>Buyer</label>
+          <input type="text" id="buyer">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Style</label>
+          <input type="text" id="style">
+        </div>
+        <div class="col">
+          <label>Status</label>
+          <select id="status">
+            <option value="Planned">Planned</option>
+            <option value="Completed">Completed</option>
+            <option value="Delayed">Delayed</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Issue / Notes</label>
+      <textarea id="issue"></textarea>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        
+        <!-- FIXED: tambah type="button" agar tidak submit default -->
+        <button id="saveBtn" type="button">Simpan</button> <!-- FIXED -->
+        
+        <button type="button" class="secondary" onclick="closeModal()">Batal</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<script>
+/* ---------------- FIREBASE INIT ------------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+  authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+  projectId: "inventory-gudang-16dfe",
+  storageBucket: "inventory-gudang-16dfe.appspot.com",
+  messagingSenderId: "663364522026",
+  appId: "1:663364522026:web:f48fb1ba0331695de83353"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* --------------- APP LOGIC ------------------ */
+
+let data = [];
+let editId = null;
+const tbody = document.querySelector("#ppmTable tbody");
+function $(id){ return document.getElementById(id); }
+
+function render(){
+  tbody.innerHTML = "";
+  data.forEach((r,i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${r.tgl}</td>
+      <td>${escape(r.buyer)}</td>
+      <td>${escape(r.style)}</td>
+      <td>${escape(r.status)}</td>
+      <td>${escape(r.issue)}</td>
+      <td class="no-print actions">
+        <button onclick="editRow('${r.id}')">Edit</button>
+        <button class="danger" onclick="deleteRow('${r.id}')">Hapus</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadData(){
+  const snap = await db.collection("ppmData").orderBy("tgl","asc").get();
+  data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  render();
+}
+loadData();
+
+function openModal(){
+  $("modal").style.display = "flex";
+  $("modalTitle").textContent = "Tambah Data PPM";
+  $("saveBtn").onclick = addRow;
+}
+function closeModal(){
+  $("modal").style.display = "none";
+  $("ppmForm").reset();
+  editId = null;
+}
+
+async function addRow(){
+  const row = readForm();
+  if(!row.tgl){ alert("Tanggal wajib diisi"); return; }
+  await db.collection("ppmData").add(row);
+  await loadData();
+  closeModal();
+}
+
+async function editRow(id){
+  const doc = await db.collection("ppmData").doc(id).get();
+  const r = doc.data();
+  editId = id;
+
+  openModal();
+  $("modalTitle").textContent = "Edit Data PPM";
+  $("saveBtn").onclick = updateRow;
+
+  $("tgl").value = r.tgl;
+  $("buyer").value = r.buyer;
+  $("style").value = r.style;
+  $("status").value = r.status;
+  $("issue").value = r.issue;
+}
+
+async function updateRow(){
+  if(!editId) return;
+  const row = readForm();
+  await db.collection("ppmData").doc(editId).update(row);
+  await loadData();
+  closeModal();
+}
+
+async function deleteRow(id){
+  if(!confirm("Hapus data ini?")) return;
+  await db.collection("ppmData").doc(id).delete();
+  await loadData();
+}
+
+function readForm(){
+  return {
+    tgl: $("tgl").value,
+    buyer: $("buyer").value.trim(),
+    style: $("style").value.trim(),
+    status: $("status").value,
+    issue: $("issue").value.trim()
+  };
+}
+
+function escape(v){
+  return (v||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function exportCSV(){
+  if(!data.length){ alert("Tidak ada data"); return; }
+
+  const header = ["Schedule PPM","Buyer","Style","Status","Issue"];
+  const body = data.map(r => [
+    r.tgl, r.buyer, r.style, r.status, r.issue
+  ]);
+
+  let csv = header.join(",") + "\n" +
+    body.map(row => row.map(c => `"${(c||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ppm-data.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
