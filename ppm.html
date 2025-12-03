@@ -20,9 +20,8 @@
       color:#0b1220;
     }
 
-    /* DIBESARKAN */
     .container{
-      max-width:1120px; /* sebelumnya 980px */
+      max-width:1120px;
       margin:0 auto;
     }
 
@@ -34,12 +33,11 @@
     }
     h1{font-size:1.1rem;margin:0}
 
-    /* DIBESARKAN */
     .card{
       background:var(--card);
       border-radius:10px;
       box-shadow:0 6px 18px rgba(15,23,42,0.06);
-      padding:24px;  /* sebelumnya 14px */
+      padding:24px;
     }
 
     table{
@@ -58,8 +56,6 @@
       position:sticky;
       top:0;
     }
-    .actions button{padding:6px 8px;font-size:12px}
-    .muted{color:var(--muted);font-size:13px}
 
     button{
       background:var(--accent);
@@ -101,9 +97,6 @@
       font-size:1rem;font-weight:600;margin-bottom:12px;
       display:flex;justify-content:space-between;align-items:center;
     }
-    .modal-close{
-      cursor:pointer;font-size:20px;font-weight:bold;color:#555;
-    }
 
     .row{display:flex;gap:10px;margin-bottom:10px}
     .col{flex:1}
@@ -141,6 +134,7 @@
           <tr>
             <th>#</th>
             <th>Schedule PPM</th>
+            <th>Waktu</th> <!-- DITAMBAHKAN -->
             <th>Buyer</th>
             <th>Style</th>
             <th>Status</th>
@@ -170,22 +164,31 @@
     </div>
 
     <form id="ppmForm" onsubmit="return false;">
+
       <div class="row">
         <div class="col">
           <label>Schedule PPM</label>
           <input type="date" id="tgl" required>
         </div>
+
         <div class="col">
-          <label>Buyer</label>
-          <input type="text" id="buyer">
+          <label>Waktu</label>
+          <input type="time" id="waktu"> <!-- DITAMBAHKAN -->
         </div>
       </div>
 
       <div class="row">
         <div class="col">
+          <label>Buyer</label>
+          <input type="text" id="buyer">
+        </div>
+        <div class="col">
           <label>Style</label>
           <input type="text" id="style">
         </div>
+      </div>
+
+      <div class="row">
         <div class="col">
           <label>Status</label>
           <select id="status">
@@ -222,7 +225,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* --------------- APP LOGIC ------------------ */
-
 let data = [];
 let editId = null;
 const tbody = document.querySelector("#ppmTable tbody");
@@ -235,11 +237,12 @@ function render(){
     tr.innerHTML = `
       <td>${i+1}</td>
       <td>${r.tgl}</td>
+      <td>${r.waktu || ""}</td> <!-- DITAMBAHKAN -->
       <td>${escape(r.buyer)}</td>
       <td>${escape(r.style)}</td>
       <td>${escape(r.status)}</td>
       <td>${escape(r.issue)}</td>
-      <td class="no-print actions">
+      <td class="no-print">
         <button onclick="editRow('${r.id}')">Edit</button>
         <button class="danger" onclick="deleteRow('${r.id}')">Hapus</button>
       </td>
@@ -260,6 +263,7 @@ function openModal(){
   $("modalTitle").textContent = "Tambah Data PPM";
   $("saveBtn").onclick = addRow;
 }
+
 function closeModal(){
   $("modal").style.display = "none";
   $("ppmForm").reset();
@@ -284,6 +288,7 @@ async function editRow(id){
   $("saveBtn").onclick = updateRow;
 
   $("tgl").value = r.tgl;
+  $("waktu").value = r.waktu || "";  // DITAMBAHKAN
   $("buyer").value = r.buyer;
   $("style").value = r.style;
   $("status").value = r.status;
@@ -307,6 +312,7 @@ async function deleteRow(id){
 function readForm(){
   return {
     tgl: $("tgl").value,
+    waktu: $("waktu").value,      // DITAMBAHKAN
     buyer: $("buyer").value.trim(),
     style: $("style").value.trim(),
     status: $("status").value,
@@ -321,9 +327,10 @@ function escape(v){
 function exportCSV(){
   if(!data.length){ alert("Tidak ada data"); return; }
 
-  const header = ["Schedule PPM","Buyer","Style","Status","Issue"];
+  const header = ["Schedule PPM","Waktu","Buyer","Style","Status","Issue"];
+
   const body = data.map(r => [
-    r.tgl, r.buyer, r.style, r.status, r.issue
+    r.tgl, r.waktu || "", r.buyer, r.style, r.status, r.issue
   ]);
 
   let csv =
