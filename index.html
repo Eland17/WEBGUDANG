@@ -539,25 +539,6 @@ window.addEventListener("resize", renderInventory);
   const db = (window.firebase && window.firebase.firestore) ? firebase.firestore() : null;
   if (!db) console.warn('Firestore compat tidak terdeteksi. Fungsi simpan Firestore tidak akan bekerja.');
 
-  // --- Tambahkan tombol Stok Opname di dekat tombol Export Excel ---
-  function insertStokOpnameButton() {
-    const btnExport = document.getElementById('btnExportExcel');
-    if (!btnExport) return;
-    const btn = document.createElement('button');
-    btn.id = 'btnStokOpname';
-    btn.className = 'btn';
-    btn.style.background = '#4A90E2';
-    btn.style.color = 'white';
-    btn.style.border = 'none';
-    btn.style.padding = '8px 12px';
-    btn.style.borderRadius = '4px';
-    btn.style.cursor = 'pointer';
-    btn.style.marginLeft = '8px';
-    btn.textContent = 'Stok Opname';
-    btnExport.insertAdjacentElement('afterend', btn);
-
-    btn.addEventListener('click', openStokOpnameModal);
-  }
 
   // --- Buat Modal (HTML + style) ---
   function createModalHTML() {
@@ -1096,6 +1077,7 @@ XLSX.writeFile(wb, `KARTU_STOK_${safeName}.xlsx`);
 
 </body>
 </html>
+
 
 
 
