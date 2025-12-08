@@ -146,8 +146,8 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
       <a href="form-keluar.html">Barang Keluar</a>
       <a href="mutasi.html">Mutasi Barang</a>
       <a href="laporan-stok-opname.html">Laporan Stok Opname</a>
+      <a href="rekap.html">Rekapitulasi</a>
       <a href="fsnm.html">FSNM Report</a>
-      <a href="ppm.html">PPM</a>
       <button id="btnLogout" style="background:#d9534f;">Logout</button>
     </nav>
 
@@ -200,6 +200,9 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
       <label>Dari: <input type="date" id="filterTanggalDariModal"></label>
       <label>Sampai: <input type="date" id="filterTanggalSampaiModal"></label>
       <button id="btnPrintKartu" style="background:#28a745; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Print</button>
+      <button id="btnExportKartuExcel" style="background:#007bff; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Export Excel
+</button>
+
     </div>
 
     <div style="overflow-x:auto; max-height:70vh;">
@@ -253,13 +256,21 @@ window.onclick = e=> { if(e.target==modalKartu) modalKartu.style.display="none";
 
 let kartuStokData = [];
 async function bukaKartuStok(kodeBarang, namaBarang){
-  modalKartu.style.display="flex";
-  judulKartuStok.textContent = `Kartu Stok - ${kodeBarang} (${namaBarang})`;
-  tbodyKartuStok.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
+  modalKartu.style.display = "flex";
 
+  // Ambil data masuk/keluar untuk menentukan satuan
   try {
     const masukSnap = await db.collection("barangMasuk").where("kode_barang","==",kodeBarang).get();
     const keluarSnap = await db.collection("barangKeluar").where("kode_barang","==",kodeBarang).get();
+
+    // Tentukan satuan (ambil dari data pertama yang ada)
+    let satuan = "";
+    if(!masukSnap.empty) satuan = masukSnap.docs[0].data().satuan || "";
+    else if(!keluarSnap.empty) satuan = keluarSnap.docs[0].data().satuan || "";
+
+    judulKartuStok.textContent = `Kartu Stok - ${kodeBarang} (${namaBarang}) [${satuan}]`;
+    tbodyKartuStok.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
+
     let data = [];
     masukSnap.forEach(doc => {
       const d = doc.data();
@@ -277,6 +288,7 @@ async function bukaKartuStok(kodeBarang, namaBarang){
     tbodyKartuStok.innerHTML="<tr><td colspan='6'>Gagal ambil data.</td></tr>";
   }
 }
+
 
 function renderKartuStok(){
   const dari = document.getElementById("filterTanggalDariModal").value;
@@ -312,21 +324,97 @@ function renderKartuStok(){
 document.getElementById("filterTanggalDariModal").addEventListener("change", renderKartuStok);
 document.getElementById("filterTanggalSampaiModal").addEventListener("change", renderKartuStok);
 
-document.getElementById("btnPrintKartu").addEventListener("click", ()=>{ 
-  const judul = document.getElementById("judulKartuStok").textContent;
-  const tableHTML = document.querySelector("#modalKartuStok table").outerHTML;
+document.getElementById("btnPrintKartu").addEventListener("click", () => {
+  const modal = document.getElementById("modalKartuStok");
+  if (!modal) return alert("Modal Kartu Stok tidak ditemukan!");
+
+  const judul = "KARTU STOK";
+
+  // Ambil nama barang
+  let namaBarang = modal.innerText.split("\n").map(t => t.trim()).filter(t => t)[0] || "-";
+  namaBarang = namaBarang.replace(/Kartu Stok - /i, '').trim();
+
+  const table = modal.querySelector("table");
+  if (!table) return alert("Tabel tidak ditemukan!");
+
   const w = window.open("", "_blank");
-  w.document.write(`<html><head><title>${judul}</title><style>
-    body{font-family:monospace;padding:20px;}
-    table{border-collapse:collapse;width:100%;}
-    th,td{border:1px solid #333;padding:6px;text-align:center;}
-    th{background:#1e90ff;color:white;}
-    .saldo-nol{background:#f8d7da;}
-    .saldo-rendah{background:#fff3cd;}
-  </style></head><body>${tableHTML}</body></html>`);
+  w.document.write(`
+    <html>
+    <head>
+      <title>${judul}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h2 { 
+            text-align: center; 
+            margin-bottom: 5px; 
+            font-size: 20px; 
+            font-weight: bold; 
+        }
+        h3 { 
+            text-align: center; 
+            margin-top: 5px; 
+            margin-bottom: 15px; 
+            font-size: 16px; 
+            font-weight: bold; 
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            font-size: 13px; 
+        }
+        th, td { border: 1px solid #333; padding: 6px; }
+        th { 
+            background-color: #007bff; 
+            color: white; 
+            font-weight: bold; 
+            text-align: left; 
+        }
+        table thead tr th:nth-child(2) { text-align: center; }
+        table thead tr th:nth-child(3), 
+        table thead tr th:nth-child(4), 
+        table thead tr th:nth-child(5) { text-align: right; }
+        td { text-align: left; }
+        td.center { text-align: center; }
+        td.right { text-align: right; }
+        .saldo-nol { background:#f8d7da; }
+        .saldo-rendah { background:#fff3cd; }
+      </style>
+    </head>
+    <body>
+      <h2>${judul}</h2>
+      <h3>${namaBarang}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Kode Buyer</th>
+            <th>Masuk</th>
+            <th>Keluar</th>
+            <th>Saldo</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from(table.rows).slice(1).map(row => {
+            return `<tr>
+              <td>${row.cells[0].innerText}</td>
+              <td class="center">${row.cells[1].innerText}</td>
+              <td class="right">${row.cells[2].innerText}</td>
+              <td class="right">${row.cells[3].innerText}</td>
+              <td class="right">${row.cells[4].innerText}</td>
+              <td>${row.cells[5].innerText}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `);
   w.document.close();
   w.print();
 });
+
+
 
 // Inventory
 let inventoryData = [];
@@ -441,6 +529,569 @@ setInterval(()=>{
 // Adjust rows per page on resize
 window.addEventListener("resize", renderInventory);
 </script>
+
+<!-- ======= Stok Opname: Script (paste sebelum </body>) ======= -->
+<script>
+(function(){
+  // --- Konfigurasi Firestore (pakai compat yang sudah ada di halaman) ---
+  // Pastikan file firebase-app-compat.js dan firebase-firestore-compat.js sudah diload (sudah ada).
+  // firebase.initializeApp(...) biasanya sudah ada di projectmu; jika belum ada, tambahkan config sebelum script ini.
+  const db = (window.firebase && window.firebase.firestore) ? firebase.firestore() : null;
+  if (!db) console.warn('Firestore compat tidak terdeteksi. Fungsi simpan Firestore tidak akan bekerja.');
+
+  // --- Tambahkan tombol Stok Opname di dekat tombol Export Excel ---
+  function insertStokOpnameButton() {
+    const btnExport = document.getElementById('btnExportExcel');
+    if (!btnExport) return;
+    const btn = document.createElement('button');
+    btn.id = 'btnStokOpname';
+    btn.className = 'btn';
+    btn.style.background = '#4A90E2';
+    btn.style.color = 'white';
+    btn.style.border = 'none';
+    btn.style.padding = '8px 12px';
+    btn.style.borderRadius = '4px';
+    btn.style.cursor = 'pointer';
+    btn.style.marginLeft = '8px';
+    btn.textContent = 'Stok Opname';
+    btnExport.insertAdjacentElement('afterend', btn);
+
+    btn.addEventListener('click', openStokOpnameModal);
+  }
+
+  // --- Buat Modal (HTML + style) ---
+  function createModalHTML() {
+    if (document.getElementById('modalStokOpname')) return;
+
+    const html = `
+    <div id="modalStokOpname" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:99999; justify-content:center; align-items:flex-start; padding:32px 12px; overflow:auto;">
+      <div style="background:#fff; width:100%; max-width:1100px; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.2); overflow:hidden;">
+        <div style="background:#1e90ff; color:#fff; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div style="font-size:18px; font-weight:700;">Laporan Stok Opname</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button id="btnPrintStokOpname" style="background:#28a745; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Print</button>
+            <button id="btnExportStokOpnameExcel" style="background:#f0ad4e; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Export Excel</button>
+            <button id="btnSaveStokOpname" style="background:#007bff; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;">Simpan ke Firestore</button>
+            <button id="btnCloseStokOpname" style="background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.25); padding:6px 10px; border-radius:6px; cursor:pointer;">Tutup</button>
+          </div>
+        </div>
+
+        <div style="padding:16px; max-height:70vh; overflow:auto;">
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+            <div><label><strong>Outlet:</strong> <span id="so_outlet">Gudang Utama</span></label></div>
+            <div><label><strong>Tanggal:</strong> <input type="date" id="so_tanggal" style="padding:6px; border-radius:4px; border:1px solid #ccc;" /></label></div>
+            <div><label><strong>Dibuat Oleh:</strong> <input type="text" id="so_dibuat_oleh" placeholder="Nama" style="padding:6px; border-radius:4px; border:1px solid #ccc;" /></label></div>
+            <div style="margin-left:auto; font-size:13px; color:#555;"><strong>Total Selisih:</strong> <span id="so_total_selisih">0</span></div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table id="tableStokOpname" style="width:100%; border-collapse:collapse; min-width:900px;">
+              <thead>
+                <tr style="background:#f2f6fb;">
+                  <th style="padding:8px; border:1px solid #ddd; width:40px;">No</th>
+                  <th style="padding:8px; border:1px solid #ddd;">Kode Barang</th>
+                  <th style="padding:8px; border:1px solid #ddd;">Nama Barang</th>
+                  <th style="padding:8px; border:1px solid #ddd; width:80px;">Satuan</th>
+                  <th style="padding:8px; border:1px solid #ddd; width:120px; text-align:right;">Stok Sistem</th>
+                  <th style="padding:8px; border:1px solid #ddd; width:140px; text-align:right;">Stok Fisik</th>
+                  <th style="padding:8px; border:1px solid #ddd; width:120px; text-align:right;">Selisih</th>
+                  <th style="padding:8px; border:1px solid #ddd; width:220px;">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyStokOpname"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    `;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    document.body.appendChild(wrapper);
+
+    // Event listeners
+    document.getElementById('btnCloseStokOpname').addEventListener('click', () => {
+      document.getElementById('modalStokOpname').style.display = 'none';
+    });
+    document.getElementById('btnPrintStokOpname').addEventListener('click', printStokOpname);
+    document.getElementById('btnExportStokOpnameExcel').addEventListener('click', exportStokOpnameExcel);
+    document.getElementById('btnSaveStokOpname').addEventListener('click', saveStokOpnameToFirestore);
+  }
+
+  // --- Buka modal dan isi data dari #tabelInventory ---
+  function openStokOpnameModal() {
+    createModalHTML();
+    const modal = document.getElementById('modalStokOpname');
+    const tbody = document.getElementById('tbodyStokOpname');
+    tbody.innerHTML = ''; // reset
+
+    // isi tanggal default = hari ini (YYYY-MM-DD)
+    const today = new Date();
+    const iso = today.toISOString().slice(0,10);
+    const soTanggalInput = document.getElementById('so_tanggal');
+    soTanggalInput.value = iso;
+    const soDibuatInput = document.getElementById('so_dibuat_oleh');
+    // isi default nama jika ada (optional)
+    soDibuatInput.value = (window.USER_NAME || '') ;
+
+    // ambil data dari tabel inventory
+    const tbl = document.getElementById('tabelInventory');
+    if (!tbl) {
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:12px; text-align:center;">Tabel inventory tidak ditemukan.</td></tr>';
+      modal.style.display = 'flex';
+      return;
+    }
+
+    const rows = Array.from(tbl.querySelectorAll('tbody tr'));
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:12px; text-align:center;">Tidak ada data stok di tabel.</td></tr>';
+      modal.style.display = 'flex';
+      return;
+    }
+
+    let no = 0;
+    rows.forEach(r => {
+      // Sesuaikan berdasarkan struktur tabelmu:
+      // Kolom order: 0:Kode Barang, 1:Kode Buyer, 2:Nama Barang, 3:Satuan, 4:Stok Tersisa, 5:Aksi
+      const cells = r.children;
+      if (cells.length < 5) return; // skip jika struktur tidak memenuhi
+
+      const kode = cells[0].textContent.trim();
+      const nama = cells[2].textContent.trim();
+      const satuan = cells[3].textContent.trim();
+      const stokSistemText = cells[4].textContent.trim();
+      const stokSistem = parseNumber(stokSistemText);
+
+      no++;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${no}</td>
+        <td style="padding:6px; border:1px solid #ddd;">${escapeHtml(kode)}</td>
+        <td style="padding:6px; border:1px solid #ddd; text-align:left;">${escapeHtml(nama)}</td>
+        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${escapeHtml(satuan)}</td>
+        <td style="padding:6px; border:1px solid #ddd; text-align:right; font-family:monospace;">${formatNumber(stokSistem)}</td>
+        <td style="padding:6px; border:1px solid #ddd; text-align:right;">
+          <input class="so_input_fisik" type="number" step="1" min="0" value="${stokSistem}" style="width:100%; padding:6px; box-sizing:border-box; text-align:right;" />
+        </td>
+        <td style="padding:6px; border:1px solid #ddd; text-align:right; font-family:monospace;">
+          <span class="so_selisih" data-value="0">0</span>
+        </td>
+        <td style="padding:6px; border:1px solid #ddd;">
+          <input class="so_keterangan" type="text" placeholder="Keterangan..." style="width:100%; padding:6px; box-sizing:border-box;" />
+        </td>
+      `;
+      // simpan stokSistem dalam attribute untuk perhitungan
+      tr.dataset.kode = kode;
+      tr.dataset.nama = nama;
+      tr.dataset.satuan = satuan;
+      tr.dataset.stokSistem = String(stokSistem);
+      tbody.appendChild(tr);
+    });
+
+    // tambahkan event listener pada input stok fisik
+    tbody.querySelectorAll('.so_input_fisik').forEach(input => {
+      input.addEventListener('input', onFisikChange);
+      // trigger once to compute initial selisih
+      input.dispatchEvent(new Event('input'));
+    });
+
+    // tampilkan modal
+    modal.style.display = 'flex';
+    computeTotalSelisih();
+  }
+
+  // --- Handler input stok fisik ---
+  function onFisikChange(e) {
+    const input = e.target;
+    const tr = input.closest('tr');
+    const stokSistem = parseFloat(tr.dataset.stokSistem || '0');
+    const stokFisik = parseNumber(input.value);
+    const selisih = stokFisik - stokSistem;
+    const spanSelisih = tr.querySelector('.so_selisih');
+    if (spanSelisih) {
+      spanSelisih.textContent = formatNumber(selisih);
+      spanSelisih.dataset.value = String(selisih);
+      // style highlight
+      spanSelisih.style.color = selisih === 0 ? '#333' : (selisih < 0 ? '#c9302c' : '#155724');
+    }
+    computeTotalSelisih();
+  }
+
+// Robust export — memastikan NAMA ITEM tidak terpotong + BORDER OTOMATIS
+(function setupExportKartuStok_NoCut() {
+
+  if (typeof XLSX === "undefined") {
+    console.error("XLSX not found. Pastikan xlsx.full.min.js dimuat.");
+    return;
+  }
+
+  function ensureBtn() {
+    const controls = document.querySelector("#modalKartuStok .modal-content > div:nth-child(2)");
+    if (!controls) return null;
+
+    let b = document.getElementById("btnExportKartuExcel");
+    if (!b) {
+      b = document.createElement("button");
+      b.id = "btnExportKartuExcel";
+      b.type = "button";
+      b.textContent = "Export Excel";
+      b.style.cssText = "background:#007bff;color:#fff;padding:5px 10px;border:none;border-radius:4px;cursor:pointer;margin-left:6px;";
+      const printBtn = document.getElementById("btnPrintKartu");
+      if (printBtn && printBtn.parentNode === controls) controls.insertBefore(b, printBtn.nextSibling);
+      else controls.appendChild(b);
+    }
+    return b;
+  }
+
+  const btn = ensureBtn();
+  if (!btn) return;
+
+  function exportFunc() {
+    try {
+      const modalTable = document.querySelector("#modalKartuStok table");
+      if (!modalTable) { alert("Buka modal kartu stok terlebih dahulu."); return; }
+
+      const judulEl = document.getElementById("judulKartuStok");
+      const namaEl = document.getElementById("namaBarangKartu");
+      const fullJudul = judulEl ? judulEl.innerText.trim() : "Kartu Stok";
+      let namaBarang = namaEl && namaEl.innerText.trim() ? namaEl.innerText.trim() : "";
+
+      if (!namaBarang) namaBarang = fullJudul.replace(/kartu stok/i, "").trim() || "ITEM";
+
+      const thead = modalTable.querySelector("thead");
+      const tbody = modalTable.querySelector("tbody");
+      if (!tbody) { alert("Tabel kosong."); return; }
+
+      const headerCells = thead ? Array.from(thead.querySelectorAll("th")).map(th => th.innerText.trim()) : [];
+      const header = headerCells.length ? headerCells :
+        Array.from(tbody.querySelectorAll("tr:first-child td")).map((_, i) => `Col${i + 1}`);
+
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const bodyData = rows.map(tr =>
+        Array.from(tr.querySelectorAll("td")).map(td => {
+          let txt = td.innerText.trim();
+          const numAttempt = txt.replace(/\./g, "").replace(/,/g, ".");
+          if (/^-?\d+(\.\d+)?$/.test(numAttempt)) return Number(numAttempt);
+          return txt;
+        })
+      );
+
+      const titleRow = ["KARTU STOK"];
+      const nameRow = ["NAMA ITEM : " + namaBarang];
+
+      const finalAoA = [];
+      finalAoA.push(titleRow);
+      finalAoA.push(nameRow);
+      finalAoA.push([]);
+      finalAoA.push(header);
+      bodyData.forEach(r => finalAoA.push(r));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(finalAoA);
+
+      const colCount = header.length;
+
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } }
+      ];
+
+      // ====================================================================
+      //   LEBAR KOLOM AGAR NAMA ITEM TIDAK TERPOTONG
+      // ====================================================================
+      const nameText = "NAMA ITEM : " + namaBarang;
+      const needWidth = Math.max(80, nameText.length + 10);
+
+      let cols = new Array(colCount).fill(15);
+      cols[0] = needWidth; // kolom pertama sangat lebar
+
+      // Kolom lain sesuaikan isi
+      for (let c = 1; c < colCount; c++) {
+        let maxLen = 12;
+        for (let r = 3; r < finalAoA.length; r++) {
+          const cell = finalAoA[r]?.[c];
+          if (!cell) continue;
+          const len = String(cell).length;
+          if (len + 2 > maxLen) maxLen = len + 2;
+        }
+        cols[c] = maxLen;
+      }
+
+      ws['!cols'] = cols.map(w => ({ wch: Math.min(w, 150) }));
+
+      // ====================================================================
+      //   BORDER OTOMATIS UNTUK SELURUH TABEL
+      // ====================================================================
+      const borderStyle = {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      };
+
+      const range = XLSX.utils.decode_range(ws['!ref']);
+
+      for (let R = 0; R <= range.e.r; R++) {
+        for (let C = 0; C <= range.e.c; C++) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellRef]) continue;
+          if (!ws[cellRef].s) ws[cellRef].s = {};
+          ws[cellRef].s.border = borderStyle;
+        }
+      }
+
+      // ====================================================================
+      //   WRITE FILE
+      // ====================================================================
+      XLSX.utils.book_append_sheet(wb, ws, "Kartu Stok");
+
+      const safeName = namaBarang.replace(/[\\\/:*?"<>|]/g, "_").replace(/\s+/g, "_");
+      XLSX.writeFile(wb, `KARTU_STOK_${safeName}.xlsx`);
+
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Export gagal — cek console (F12).");
+    }
+  }
+
+  btn.addEventListener("click", exportFunc);
+
+})();
+
+
+
+  // --- Hitung total selisih ---
+  function computeTotalSelisih() {
+    const tbody = document.getElementById('tbodyStokOpname');
+    const spans = tbody.querySelectorAll('.so_selisih');
+    let total = 0;
+    spans.forEach(s => total += parseNumber(s.dataset.value));
+    document.getElementById('so_total_selisih').textContent = formatNumber(total);
+  }
+
+  // --- Simpan ke Firestore (Opsi 3) ---
+  async function saveStokOpnameToFirestore() {
+    if (!db) {
+      alert('Firestore tidak terdeteksi. Pastikan Firebase sudah dikonfigurasi di halaman ini.');
+      return;
+    }
+
+    const tanggal = document.getElementById('so_tanggal').value;
+    if (!tanggal) { alert('Pilih tanggal opname.'); return; }
+    const dibuatOleh = document.getElementById('so_dibuat_oleh').value || 'unknown';
+    const outlet = document.getElementById('so_outlet').textContent || 'Gudang Utama';
+    const tbody = document.getElementById('tbodyStokOpname');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    if (rows.length === 0) { alert('Tidak ada item untuk disimpan.'); return; }
+
+    if (!confirm('Simpan hasil Stok Opname ke Firestore?')) return;
+
+    try {
+      // buat dokumen utama
+      const docRef = await db.collection('stokOpname').doc(); // auto-id
+      const metadata = {
+        tanggal: tanggal,
+        dibuat_oleh: dibuatOleh,
+        outlet: outlet,
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        total_selisih: parseNumber(document.getElementById('so_total_selisih').textContent)
+      };
+      // set metadata doc
+      await docRef.collection('metadata').doc('info').set(metadata);
+
+      // batch untuk items
+      const batch = db.batch();
+      rows.forEach((tr, i) => {
+        const kode = tr.dataset.kode || '';
+        const nama = tr.dataset.nama || '';
+        const satuan = tr.dataset.satuan || '';
+        const stokSistem = parseNumber(tr.dataset.stokSistem || '0');
+        const stokFisikEl = tr.querySelector('.so_input_fisik');
+        const keteranganEl = tr.querySelector('.so_keterangan');
+        const stokFisik = stokFisikEl ? parseNumber(stokFisikEl.value) : stokSistem;
+        const selisih = stokFisik - stokSistem;
+        const itemRef = docRef.collection('items').doc(); // auto-item id
+        const itemData = {
+          kode_barang: kode,
+          nama_barang: nama,
+          satuan: satuan,
+          stok_sistem: stokSistem,
+          stok_fisik: stokFisik,
+          selisih: selisih,
+          keterangan: keteranganEl ? keteranganEl.value || '' : '',
+          sequence: i+1
+        };
+        batch.set(itemRef, itemData);
+      });
+
+      await batch.commit();
+      alert('Sukses menyimpan Stok Opname ke Firestore.');
+      document.getElementById('modalStokOpname').style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      alert('Gagal menyimpan ke Firestore: ' + (err.message || err));
+    }
+  }
+
+  // --- Export Excel (SheetJS) ---
+  function exportStokOpnameExcel() {
+    const thead = [['No','Kode Barang','Nama Barang','Satuan','Stok Sistem','Stok Fisik','Selisih','Keterangan']];
+    const tbody = document.getElementById('tbodyStokOpname');
+    const rows = Array.from(tbody.querySelectorAll('tr')).map((tr, idx) => {
+      const kode = tr.dataset.kode || '';
+      const nama = tr.dataset.nama || '';
+      const satuan = tr.dataset.satuan || '';
+      const stokSistem = parseNumber(tr.dataset.stokSistem || '0');
+      const stokFisik = parseNumber(tr.querySelector('.so_input_fisik')?.value || stokSistem);
+      const selisih = parseNumber(tr.querySelector('.so_selisih')?.dataset.value || 0);
+      const keterangan = tr.querySelector('.so_keterangan')?.value || '';
+      return [idx+1, kode, nama, satuan, stokSistem, stokFisik, selisih, keterangan];
+    });
+    const data = thead.concat(rows);
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Stok Opname');
+    const tanggal = document.getElementById('so_tanggal').value || new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `stok-opname-${tanggal}.xlsx`);
+  }
+
+  // --- Print modal content (membuat window baru agar stylesheet halaman utama tidak mengganggu) ---
+  function printStokOpname() {
+    const modal = document.getElementById('modalStokOpname');
+    if (!modal) return;
+    // build printable HTML
+    const outlet = document.getElementById('so_outlet').textContent || '';
+    const tanggal = document.getElementById('so_tanggal').value || '';
+    const dibuatOleh = document.getElementById('so_dibuat_oleh').value || '';
+    const totalSelisih = document.getElementById('so_total_selisih').textContent || '0';
+
+    // header
+    let html = `
+      <html>
+      <head>
+        <title>Laporan Stok Opname - ${tanggal}</title>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: Arial, sans-serif; margin:20px; color:#222; }
+          .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+          h2 { margin:0; color:#1e90ff; }
+          table { width:100%; border-collapse:collapse; margin-top:10px; }
+          th, td { border:1px solid #ddd; padding:6px; font-size:12px; vertical-align:middle; }
+          th { background:#f2f6fb; color:#111; text-align:left; }
+          td.num { text-align:right; font-family:monospace; }
+          .meta { margin-top:8px; font-size:13px; }
+          @media print { button{ display:none } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h2>Laporan Stok Opname</h2>
+            <div class="meta">Outlet: ${escapeHtml(outlet)} &nbsp; | &nbsp; Tanggal: ${escapeHtml(tanggal)} &nbsp; | &nbsp; Dibuat Oleh: ${escapeHtml(dibuatOleh)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px;"><strong>Total Selisih:</strong></div>
+            <div style="font-size:20px; color:#333;">${escapeHtml(totalSelisih)}</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px;">No</th>
+              <th>Kode Barang</th>
+              <th>Nama Barang</th>
+              <th style="width:80px;">Satuan</th>
+              <th style="width:120px; text-align:right;">Stok Sistem</th>
+              <th style="width:120px; text-align:right;">Stok Fisik</th>
+              <th style="width:120px; text-align:right;">Selisih</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+    // rows
+    const tbodyEl = document.getElementById('tbodyStokOpname');
+    Array.from(tbodyEl.querySelectorAll('tr')).forEach((tr, idx) => {
+      const kode = tr.dataset.kode || '';
+      const nama = tr.dataset.nama || '';
+      const satuan = tr.dataset.satuan || '';
+      const stokSistem = formatNumber(parseNumber(tr.dataset.stokSistem || 0));
+      const stokFisik = formatNumber(parseNumber(tr.querySelector('.so_input_fisik')?.value || 0));
+      const selisih = formatNumber(parseNumber(tr.querySelector('.so_selisih')?.dataset.value || 0));
+      const keterangan = tr.querySelector('.so_keterangan')?.value || '';
+      html += `
+        <tr>
+          <td style="text-align:center;">${idx+1}</td>
+          <td>${escapeHtml(kode)}</td>
+          <td>${escapeHtml(nama)}</td>
+          <td style="text-align:center;">${escapeHtml(satuan)}</td>
+          <td class="num">${stokSistem}</td>
+          <td class="num">${stokFisik}</td>
+          <td class="num">${selisih}</td>
+          <td>${escapeHtml(keterangan)}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></body></html>`;
+
+    const w = window.open('', '_blank', 'noopener');
+    if (!w) {
+      alert('Pop-up diblokir — izinkan pop-up untuk mencetak.');
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    // small delay agar content render dulu
+    setTimeout(() => { w.print(); }, 400);
+  }
+
+  // --- Utilities ---
+  function parseNumber(text) {
+    if (text === null || text === undefined) return 0;
+    // remove non numeric except minus and dot
+    const cleaned = String(text).replace(/[^0-9\-,.]/g, '').replace(',', '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+  function formatNumber(num) {
+    // format integer-like numbers without decimals where possible
+    if (num === null || num === undefined) return '0';
+    const n = Number(num);
+    if (Number.isInteger(n)) return n.toString();
+    return n.toLocaleString('id-ID');
+  }
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+  }
+
+  // --- Hook up export button di modal juga ke fungsi utama (jika user menekan Export Excel di halaman utama sebelum buka modal) ---
+  function hookMainExportButton() {
+    const mainExport = document.getElementById('btnExportExcel');
+    if (!mainExport) return;
+    // Jika mainExport dipakai untuk export inventory biasa, jangan ubah. Kita tambahkan tombol Stok Opname terpisah.
+  }
+
+  // --- Inisialisasi: insert tombol setelah DOM siap ---
+  document.addEventListener('DOMContentLoaded', () => {
+    insertStokOpnameButton();
+    createModalHTML();
+  });
+
+  // --- Expose some functions for debugging (opsional) ---
+  window.__stokOpname = {
+    open: openStokOpnameModal,
+    exportExcel: exportStokOpnameExcel,
+    print: printStokOpname,
+    saveToFirestore: saveStokOpnameToFirestore
+  };
+
+})();
+</script>
+<!-- ======= End Stok Opname Script ======= -->
+
 </body>
 </html>
 
