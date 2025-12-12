@@ -1,403 +1,426 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rekapitulasi Total Pemakaian Material</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rekapitulasi Total Pemakaian Material</title>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- XLSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <style>
-        /* CSS Dasar - Mengikuti Gaya Aplikasi Utama */
-        * { box-sizing: border-box; }
-        body, html { margin:0; padding:0; font-family: Arial,sans-serif; height:100vh; display:flex; flex-direction:column; }
-        .wrapper { min-height:100vh; display:flex; flex-direction:column; flex-grow:1; }
-        header { background:#1e90ff; color:white; text-align:center; padding:0; height:45px; line-height:45px; font-size:24px; font-weight:bold; user-select:none; flex-shrink:0; box-shadow:0 2px 4px rgba(0,0,0,0.1); position:relative; }
-        
-        .main-content { display:flex; flex:1; overflow:hidden; min-height:0; position:relative; }
-        
-        /* ADJUSTMENT: Konten utama mengambil lebar penuh (flex: 1) */
-        .content { 
-            flex:1; 
-            padding:20px; 
-            overflow-y:auto; 
-            display:flex; 
-            flex-direction:column; 
-            min-height:0; 
-            overflow-x:auto; 
-        }
-        
-        footer { background:#007bff; color:white; text-align:center; padding:10px 0; flex-shrink:0; }
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        display: flex;
+    }
 
-        /* Filter dan Kontrol Rekapitulasi */
-        .rekap-controls { 
-            margin-bottom: 15px; 
-            display: flex; 
-            gap: 10px; 
-            flex-wrap: wrap; 
-            align-items: center; 
-            padding: 10px; 
-            border: 1px solid #ddd;
-            background-color: #f7f7f7;
-        }
-        .rekap-controls input[type="date"], .rekap-controls select { 
-            padding: 7px 10px; 
-            border-radius: 4px; 
-            border: 1px solid #ccc; 
-            font-size: 14px; 
-        }
-        /* Style untuk tombol */
-        .rekap-controls button, .rekap-controls a.button {
-            background:#1e90ff; 
-            color:white; 
-            border:none; 
-            padding: 8px 14px; 
-            border-radius: 4px; 
-            cursor:pointer; 
-            transition:0.3s;
-            text-decoration: none; /* Untuk elemen <a> */
-            text-align: center;
-        }
-        .rekap-controls button:hover, .rekap-controls a.button:hover {
-            background:#0056b3;
-        }
+    /* SIDEBAR */
+    .sidebar {
+        width: 240px;
+        background: #333;
+        color: #fff;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 20px 10px;
+    }
 
-        /* Tabel Rekapitulasi - Compact Style */
-        .rekap-table-container { 
-            margin-top: 10px; 
-            flex-grow: 1; 
-            overflow-x: auto; 
-            overflow-y: auto; 
-        }
+    .sidebar a {
+        display: block;
+        color: #ccc;
+        text-decoration: none;
+        padding: 12px 15px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        transition: 0.2s;
+        font-size: 15px;
+    }
 
-        table#tabelRekapitulasi { 
-            width: 100%; 
-            min-width: 600px; 
-            border-collapse: collapse; 
-            background: #fff;
-            font-size: 9pt; 
-        }
-        
-        #tabelRekapitulasi th {
-            background: #1e90ff; 
-            color: white; 
-            padding: 6px 8px; 
-            text-align: center;
-            border: 1px solid rgba(0,0,0,0.3);
-        }
+    .sidebar a:hover {
+        background: #333;
+        color: #fff;
+    }
 
-        #tabelRekapitulasi td {
-            border: 1px solid rgba(0,0,0,0.3);
-            padding: 4px 8px; 
-            height: 25px; 
-        }
-        
-        #tabelRekapitulasi tr:nth-child(even){ background:#f9f9f9; }
-        #tabelRekapitulasi tr:hover{ background:#d0e7ff; }
-        
-        .text-left { text-align: left; }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .angka-kanan { text-align: right; font-family: monospace; }
+    .content {
+        margin-left: 260px;
+        width: calc(100% - 260px);
+        padding: 25px;
+    }
 
-        /* Judul Rekapitulasi */
-        .rekap-title {
-            text-align: center;
-            padding: 5px 0;
-            background-color: #e0e0e0;
-            margin-bottom: 10px;
-            font-size: 14pt;
-            font-weight: bold;
-        }
+    .card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
 
-        /* MOBILE STYLES */
-        @media(max-width:768px){
-            header { font-size:20px; line-height:35px; height:35px; }
-            .content { padding: 10px; }
-            .rekap-controls { gap: 5px; padding: 5px; }
-            .rekap-controls input, .rekap-controls select {
-                flex: 0 0 calc(50% - 5px);
-                font-size: 10px;
-                padding: 4px 6px;
-            }
-            .rekap-controls button, .rekap-controls a.button {
-                flex: 1 1 auto; /* Izinkan tombol dan link mengambil ruang */
-                font-size: 10px;
-                padding: 4px 6px;
-            }
-            #tabelRekapitulasi { font-size: 7pt; min-width: 400px; }
-            #tabelRekapitulasi th, #tabelRekapitulasi td { padding: 3px 5px; }
-        }
-    </style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    th {
+        background: #1e90ff;
+        color: #fff;
+        padding: 10px;
+        text-align: center;
+    }
+
+    td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .text-left  { text-align: left; }
+    .angka-kanan { text-align: right; }
+</style>
 </head>
+
 <body>
-<div class="wrapper">
-    <header>
-        REKAPITULASI TOTAL PEMAKAIAN MATERIAL
-    </header>
 
-    <div class="main-content">
-        <main class="content">
-            <div class="rekap-controls">
-                
-                <a href="index.html" class="button" style="background:#5cb85c;">Inventory Utama</a>
-                
-                <label for="filterKodeBuyer">KODE BUYER:</label>
-                <select id="filterKodeBuyer"></select>
-                
-                <label for="filterTanggalDari">Dari:</label>
-                <input type="date" id="filterTanggalDari">
-                
-                <label for="filterTanggalSampai">Sampai:</label>
-                <input type="date" id="filterTanggalSampai">
-                
-                <button id="btnTampilkanRekap">Tampilkan Rekap</button>
-                <button id="btnExportExcel">Export Excel</button>
-                
-                <button id="btnLogout" style="background:#d9534f; margin-left: auto;">Logout</button>
-            </div>
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar"></div>
 
-            <div class="rekap-table-container">
-                <div class="rekap-title">REKAPITULASI TOTAL PEMAKAIAN MATERIAL</div>
-                
-                <table id="tabelRekapitulasi">
-                    <thead>
-                        <tr>
-                            <th style="width: 20%;">KODE BARANG</th>
-                            <th style="width: 50%;">NAMA BARANG</th>
-                            <th style="width: 15%;">SATUAN</th>
-                            <th style="width: 15%;">TOTAL JUMLAH</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbodyRekap">
-                        <tr><td colspan='4' class="text-center">Silakan pilih Kode Buyer dan rentang tanggal, lalu klik Tampilkan Rekap.</td></tr>
-                    </tbody>
-                </table>
-            </div>
+<!-- CONTENT -->
+<div class="content">
+    <h1>Rekapitulasi Total Pemakaian Material</h1>
 
-        </main>
+    <div class="card">
+        <label><b>Kode Buyer</b></label>
+        <select id="filterKodeBuyer"></select>
+
+        <br><br>
+
+        <label><b>Periode</b></label><br>
+        Dari: <input type="date" id="filterTanggalDari">
+        Sampai: <input type="date" id="filterTanggalSampai">
+
+        <br><br>
+
+        <button id="btnTampilkanRekap">Tampilkan</button>
+        <button id="btnExportExcel">Export Excel</button>
+        <button id="btnPrintPreview">Print Preview</button>
+
     </div>
-    
-    <footer>Copyright © 2025 Eland</footer>
+
+    <div class="card">
+        <table id="rekapTable">
+            <thead>
+                <tr>
+                    <th>KODE BARANG</th>
+                    <th>NAMA BARANG</th>
+                    <th>SATUAN</th>
+                    <th>JUMLAH</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyRekap"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    // Konfigurasi Firebase Anda
-    const firebaseConfig = {
-        apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
-        authDomain: "inventory-gudang-16dfe.firebaseapp.com",
-        projectId: "inventory-gudang-16dfe",
-        storageBucket: "inventory-gudang-16dfe.appspot.com",
-        messagingSenderId: "663364522026",
-        appId: "1:663364522026:web:f48fb1ba0331695de83353"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+/* ---------------- FIREBASE ----------------------- */
+const firebaseConfig = {
+    apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
+    authDomain: "inventory-gudang-16dfe.firebaseapp.com",
+    projectId: "inventory-gudang-16dfe",
+    storageBucket: "inventory-gudang-16dfe.appspot.com",
+    messagingSenderId: "663364522026",
+    appId: "1:663364522026:web:f48fb1ba0331695de83353"
+};
 
-    // Elements
-    const selectBuyer = document.getElementById("filterKodeBuyer");
-    const inputDari = document.getElementById("filterTanggalDari");
-    const inputSampai = document.getElementById("filterTanggalSampai");
-    const btnTampilkan = document.getElementById("btnTampilkanRekap");
-    const btnExport = document.getElementById("btnExportExcel");
-    const tbodyRekap = document.getElementById("tbodyRekap");
-    
-    let rekapitulasiData = []; // Menyimpan data hasil agregasi
+firebase.initializeApp(firebaseConfig);
 
-    // --- Fungsi Utilitas & Setup ---
-    auth.onAuthStateChanged(user => { if(!user) window.location.href='login.html'; });
-    
-    document.getElementById('btnLogout').addEventListener('click', ()=>{ 
-        auth.signOut().then(()=>window.location.href='login.html'); 
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+auth.onAuthStateChanged(user => { if(!user) location.href = "login.html"; });
+
+const selectBuyer = document.getElementById("filterKodeBuyer");
+const inputDari = document.getElementById("filterTanggalDari");
+const inputSampai = document.getElementById("filterTanggalSampai");
+const btnTampilkan = document.getElementById("btnTampilkanRekap");
+const btnExport = document.getElementById("btnExportExcel");
+const btnPreviewPDF = document.getElementById("btnPreviewPDF");
+const tbodyRekap = document.getElementById("tbodyRekap");
+
+let rekapitulasiData = [];
+
+/* ---------------- PARSE TANGGAL KUAT ----------------------- */
+function parseTanggal(str) {
+    if (!str) return null;
+    if (str.seconds) return new Date(str.seconds * 1000);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str + "T00:00:00");
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+        const [d,m,y] = str.split("/");
+        return new Date(`${y}-${m}-${d}T00:00:00`);
+    }
+    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+        const [d,m,y] = str.split("-");
+        return new Date(`${y}-${m}-${d}T00:00:00`);
+    }
+    return null;
+}
+
+/* ---------------- SET TANGGAL ----------------------- */
+function setInitialDates() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    inputDari.value = firstDay.toISOString().split("T")[0];
+    inputSampai.value = today.toISOString().split("T")[0];
+}
+
+/* ---------------- LOAD BUYER DROPDOWN ----------------------- */
+async function loadBuyerDropdown() {
+    const snap = await db.collection("barangKeluar").get();
+    const buyers = new Set();
+    snap.forEach(doc => buyers.add(doc.data().kode_buyer));
+    selectBuyer.innerHTML =
+        `<option value="">--- Pilih Kode Buyer ---</option>` +
+        [...buyers].sort().map(b => `<option>${b}</option>`).join("");
+}
+
+/* ---------------- LOAD REKAP ----------------------- */
+async function loadRekapitulasi() {
+    const kodeBuyer = selectBuyer.value;
+    const dari = inputDari.value;
+    const sampai = inputSampai.value;
+
+    if (!kodeBuyer) return alert("Pilih kode buyer!");
+    if (!dari || !sampai) return alert("Lengkapi periode tanggal!");
+
+    tbodyRekap.innerHTML =
+        `<tr><td colspan="4" class="text-center">Mengambil data...</td></tr>`;
+
+    const q = await db.collection("barangKeluar")
+        .where("kode_buyer", "==", kodeBuyer)
+        .get();
+
+    let agg = {};
+    const tFrom = new Date(dari + "T00:00:00");
+    const tTo = new Date(sampai + "T23:59:59");
+
+    q.forEach(doc => {
+        const d = doc.data();
+        const tgl = parseTanggal(d.tanggal);
+        if (!tgl) return;
+
+        if (tgl >= tFrom && tgl <= tTo) {
+            const key = d.kode_barang;
+            if (!agg[key]) {
+                agg[key] = {
+                    kode_barang: d.kode_barang,
+                    nama_barang: d.nama_barang || "",
+                    satuan: d.satuan || "",
+                    total_jumlah: 0
+                };
+            }
+            agg[key].total_jumlah += d.jumlah || 0;
+        }
     });
-    
-    function setInitialDates() {
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        inputSampai.value = today.toISOString().split('T')[0];
-        inputDari.value = firstDay.toISOString().split('T')[0];
+
+    rekapitulasiData = Object.values(agg)
+        .sort((a,b)=>a.kode_barang.localeCompare(b.kode_barang));
+
+    renderRekap(rekapitulasiData);
+}
+
+/* ---------------- RENDER TABEL ----------------------- */
+function renderRekap(data) {
+    if (data.length === 0) {
+        tbodyRekap.innerHTML =
+            `<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>`;
+        return;
     }
 
-    // Fungsi ini hanya mengambil kode buyer dari data barangKeluar
-    async function loadBuyerDropdown(){
-        const snap = await db.collection("barangKeluar").get();
-        const buyers = new Set();
-        snap.forEach(doc=>{ 
-            if(doc.data().kode_buyer) buyers.add(doc.data().kode_buyer); 
-        });
-        selectBuyer.innerHTML = `<option value="">--- Pilih Kode Buyer ---</option>` + Array.from(buyers).sort().map(b=>`<option value="${b}">${b}</option>`).join("");
+    let html = [];
+    let total = 0;
+
+    data.forEach(d => {
+        total += d.total_jumlah;
+        html.push(`
+            <tr>
+                <td class="text-center">${d.kode_barang}</td>
+                <td class="text-left">${d.nama_barang}</td>
+                <td class="text-center">${d.satuan}</td>
+                <td class="angka-kanan">
+                    ${d.total_jumlah.toLocaleString("id-ID")}
+                </td>
+            </tr>
+        `);
+    });
+
+    html.push(`
+        <tr style="font-weight:bold; background:#eee;">
+            <td colspan="3" class="text-right">TOTAL KUANTITAS:</td>
+            <td class="angka-kanan">${total.toLocaleString("id-ID")}</td>
+        </tr>
+    `);
+
+    html.push(`
+        <tr style="font-weight:bold; background:#dfe6e9;">
+            <td colspan="3" class="text-right">TOTAL ITEM:</td>
+            <td class="angka-kanan">${data.length}</td>
+        </tr>
+    `);
+
+    tbodyRekap.innerHTML = html.join("");
+}
+
+/* ---------------- EXPORT EXCEL ----------------------- */
+btnExport.addEventListener("click", () => {
+    if (!rekapitulasiData.length) return alert("Tidak ada data!");
+
+    const buyer = selectBuyer.value;
+    const dari = inputDari.value;
+    const sampai = inputSampai.value;
+
+    const wb = XLSX.utils.book_new();
+
+    let ws_data = [
+        ["REKAPITULASI TOTAL PEMAKAIAN MATERIAL"],
+        [`KODE BUYER: ${buyer} | PERIODE: ${dari} s/d ${sampai}`],
+        [],
+        ["KODE BARANG","NAMA BARANG","SATUAN","TOTAL JUMLAH"]
+    ];
+
+    rekapitulasiData.forEach(d =>
+        ws_data.push([d.kode_barang, d.nama_barang, d.satuan, d.total_jumlah])
+    );
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap");
+    XLSX.writeFile(
+        wb,
+        `Rekap_${buyer}_${dari}_sd_${sampai}.xlsx`
+    );
+});
+
+/* ---------------- PRINT PREVIEW PDF ----------------------- */
+document.getElementById("btnPrintPreview").addEventListener("click", () => {
+    if (!rekapitulasiData.length) {
+        alert("Tidak ada data untuk dicetak!");
+        return;
     }
 
-    // --- Fungsi Utama Rekapitulasi (AGREGASI DATA) ---
-    async function loadRekapitulasi(){
-        const kodeBuyer = selectBuyer.value;
-        const tanggalDari = inputDari.value;
-        const tanggalSampai = inputSampai.value;
+    const buyer = selectBuyer.value;
+    const dari = inputDari.value;
+    const sampai = inputSampai.value;
 
-        if (!kodeBuyer) {
-            alert("Harap pilih KODE BUYER terlebih dahulu.");
-            return;
-        }
-        if (!tanggalDari || !tanggalSampai) {
-            alert("Harap tentukan rentang TANGGAL.");
-            return;
-        }
+    const rows = rekapitulasiData.map(d => `
+        <tr>
+            <td>${d.kode_barang}</td>
+            <td style="text-align:left;">${d.nama_barang}</td>
+            <td>${d.satuan}</td>
+            <td style="text-align:right;">${d.total_jumlah.toLocaleString('id-ID')}</td>
+        </tr>
+    `).join("");
 
-        tbodyRekap.innerHTML = '<tr><td colspan="4" class="text-center">Mengambil data dari Firebase...</td></tr>';
-        
-        try {
-            // QUERY FIREBASE (Sederhana, hanya filter buyer untuk menghindari masalah index)
-            const querySnapshot = await db.collection("barangKeluar")
-                .where("kode_buyer", "==", kodeBuyer)
-                .get();
+    const totalQty = rekapitulasiData.reduce((s,a) => s + a.total_jumlah, 0);
 
-            let aggregatedData = {}; // Objek untuk menyimpan total per item
-            
-            const dateFrom = new Date(tanggalDari + "T00:00:00");
-            const dateTo = new Date(tanggalSampai + "T23:59:59");
+    const printWindow = window.open("", "_blank");
 
-            querySnapshot.forEach(doc => {
-                const d = doc.data();
-                const tglTransaksi = new Date(d.tanggal + "T00:00:00");
-                
-                // 1. Filter Tanggal DI SISI CLIENT
-                if (tglTransaksi >= dateFrom && tglTransaksi <= dateTo) {
-                    const key = d.kode_barang;
+const totalItem = rekapitulasiData.length;
 
-                    if (!aggregatedData[key]) {
-                        // Inisialisasi item baru
-                        aggregatedData[key] = {
-                            kode_barang: d.kode_barang,
-                            nama_barang: d.nama_barang || "",
-                            satuan: d.satuan || "",
-                            total_jumlah: 0
-                        };
-                    }
-                    // 2. Agregasi/Akumulasi Jumlah
-                    aggregatedData[key].total_jumlah += d.jumlah || 0;
-                }
-            });
+printWindow.document.write(`
+    <html>
+    <head>
+        <title>Print Preview Rekapitulasi</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+            }
+            h2, h4 { text-align:center; margin:0; padding:0; }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                font-size: 10px;
+            }
+            th, td {
+                border: 1px solid #333;
+                padding: 6px 8px;
+            }
+            th {
+                background: #eee;
+            }
+            .text-center { text-align:center; }
+            .text-left { text-align:left; }
+            .text-right { text-align:right; }
+            @page {
+                size: portrait;
+                margin: 30mm;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>REKAPITULASI TOTAL PEMAKAIAN MATERIAL</h2>
+        <h4>BUYER: ${buyer} | PERIODE: ${dari} s/d ${sampai}</h4>
 
-            // Konversi objek agregasi menjadi array untuk dirender
-            const finalData = Object.values(aggregatedData);
-            
-            // Urutkan berdasarkan Kode Barang
-            finalData.sort((a, b) => a.kode_barang.localeCompare(b.kode_barang));
-
-            rekapitulasiData = finalData;
-            renderRekap(rekapitulasiData);
-
-        } catch (error) {
-            console.error("Error loading rekapitulasi:", error);
-            tbodyRekap.innerHTML = '<tr><td colspan="4" class="text-center">Gagal memuat data. Periksa konsol untuk detail error.</td></tr>';
-        }
-    }
-
-    // --- Render ke Tabel (MENGHITUNG JUMLAH JENIS BARANG) ---
-    function renderRekap(data) {
-        let htmlRows = [];
-        
-        if (data.length === 0) {
-            tbodyRekap.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada pemakaian material untuk filter ini.</td></tr>';
-            return;
-        }
-        
-        // TOTAL PERTAMA: Hitung total kuantitas
-        let totalKuantitasSemua = 0;
-        
-        data.forEach(d => {
-            totalKuantitasSemua += d.total_jumlah; 
-            htmlRows.push(`
+        <table>
+            <thead>
                 <tr>
-                    <td class="text-center">${d.kode_barang}</td>
-                    <td class="text-left">${d.nama_barang}</td>
-                    <td class="text-center">${d.satuan}</td>
-                    <td class="angka-kanan">${d.total_jumlah.toLocaleString("id-ID")}</td>
+                    <th>KODE BARANG</th>
+                    <th>NAMA BARANG</th>
+                    <th>SATUAN</th>
+                    <th>JUMLAH</th>
                 </tr>
-            `);
-        });
-        
-        // TOTAL KEDUA: Hitung jumlah item unik (sesuai permintaan)
-        const totalJenisBarang = data.length;
+            </thead>
+            <tbody>
+                ${rekapitulasiData.map(d => `
+                    <tr>
+                        <td class="text-center">${d.kode_barang}</td>
+                        <td class="text-left">${d.nama_barang}</td>
+                        <td class="text-center">${d.satuan}</td>
+                        <td class="text-right">${d.total_jumlah.toLocaleString('id-ID')}</td>
+                    </tr>
+                `).join("")}
+                <tr style="font-weight:bold; background:#fafafa;">
+                    <td colspan="3" class="text-right">TOTAL JUMLAH :</td>
+                    <td class="text-right">${rekapitulasiData.reduce((s,a)=>s+a.total_jumlah,0).toLocaleString('id-ID')}</td>
+                </tr>
+                <tr style="font-weight:bold; background:#f0f0f0;">
+                    <td colspan="3" class="text-right">TOTAL ITEM :</td>
+                    <td class="text-right">${rekapitulasiData.length}</td>
+                </tr>
+            </tbody>
+        </table>
 
-        // Tambahkan baris total kuantitas
-        htmlRows.push(`
-            <tr style="font-weight:bold; background:#e0e0e0;">
-                <td colspan="3" class="text-right">TOTAL KUANTITAS KELUAR:</td>
-                <td class="angka-kanan">${totalKuantitasSemua.toLocaleString("id-ID")}</td>
-            </tr>
-        `);
-
-        // Tambahkan baris total jenis barang (Item Count)
-        htmlRows.push(`
-            <tr style="font-weight:bold; background:#f0f0f0;">
-                <td colspan="3" class="text-right">TOTAL JENIS BARANG:</td>
-                <td class="angka-kanan">${totalJenisBarang.toLocaleString("id-ID")}</td>
-            </tr>
-        `);
+        <script>
+            window.onload = () => window.print();
+        <\/script>
+    </body>
+    </html>
+`);
 
 
-        tbodyRekap.innerHTML = htmlRows.join("");
-    }
+    printWindow.document.close();
+});
 
-    // --- Export Excel ---
-    btnExport.addEventListener("click", () => {
-        if (rekapitulasiData.length === 0) {
-            alert("Tidak ada data untuk diexport. Harap tampilkan rekap terlebih dahulu.");
-            return;
-        }
 
-        const buyer = selectBuyer.value || "ALL";
-        const dari = inputDari.value;
-        const sampai = inputSampai.value;
-
-        let totalKuantitasSemua = rekapitulasiData.reduce((sum, d) => sum + d.total_jumlah, 0);
-        const totalJenisBarang = rekapitulasiData.length;
-
-        const wb = XLSX.utils.book_new();
-        const ws_data = [
-            ["REKAPITULASI TOTAL PEMAKAIAN MATERIAL"],
-            [`KODE BUYER: ${buyer} | PERIODE: ${dari} s/d ${sampai}`],
-            [],
-            ["KODE BARANG", "NAMA BARANG", "SATUAN", "TOTAL JUMLAH KELUAR"] // Header
-        ];
-
-        // Data Row
-        rekapitulasiData.forEach(d => ws_data.push([
-            d.kode_barang, 
-            d.nama_barang, 
-            d.satuan, 
-            d.total_jumlah
-        ]));
-
-        // Footer Row
-        ws_data.push([]);
-        ws_data.push(["", "", "TOTAL KUANTITAS KELUAR:", totalKuantitasSemua]);
-        ws_data.push(["", "", "TOTAL JENIS BARANG:", totalJenisBarang]);
-        
-        const ws = XLSX.utils.aoa_to_sheet(ws_data);
-        // Merge baris untuk Judul
-        ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, 
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }  
-        ];
-
-        XLSX.utils.book_append_sheet(wb, ws, "RekapitulasiTotal");
-        XLSX.writeFile(wb, `RekapTotalPemakaian_${buyer}_${dari}_sd_${sampai}.xlsx`);
-    });
-
-    // --- Initialization ---
-    document.addEventListener("DOMContentLoaded", () => {
-        setInitialDates();
-        loadBuyerDropdown();
-    });
-
+/* ---------------- INIT ----------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+    setInitialDates();
+    loadBuyerDropdown();
     btnTampilkan.addEventListener("click", loadRekapitulasi);
+});
 </script>
+
 </body>
 </html>
