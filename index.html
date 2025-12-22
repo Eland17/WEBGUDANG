@@ -728,115 +728,102 @@ window.addEventListener("resize", renderInventory);
   const btn = ensureBtn();
   if (!btn) return;
 
-  function exportFunc() {
-    try {
-      const modalTable = document.querySelector("#modalKartuStok table");
-      if (!modalTable) { alert("Buka modal kartu stok terlebih dahulu."); return; }
-
-      const judulEl = document.getElementById("judulKartuStok");
-      const namaEl = document.getElementById("namaBarangKartu");
-      const fullJudul = judulEl ? judulEl.innerText.trim() : "Kartu Stok";
-      let namaBarang = namaEl && namaEl.innerText.trim() ? namaEl.innerText.trim() : "";
-
-      if (!namaBarang) namaBarang = fullJudul.replace(/kartu stok/i, "").trim() || "ITEM";
-
-      const thead = modalTable.querySelector("thead");
-      const tbody = modalTable.querySelector("tbody");
-      if (!tbody) { alert("Tabel kosong."); return; }
-
-      const headerCells = thead ? Array.from(thead.querySelectorAll("th")).map(th => th.innerText.trim()) : [];
-      const header = headerCells.length ? headerCells :
-        Array.from(tbody.querySelectorAll("tr:first-child td")).map((_, i) => `Col${i + 1}`);
-
-      const rows = Array.from(tbody.querySelectorAll("tr"));
-      const bodyData = rows.map(tr =>
-        Array.from(tr.querySelectorAll("td")).map(td => {
-          let txt = td.innerText.trim();
-          const numAttempt = txt.replace(/\./g, "").replace(/,/g, ".");
-          if (/^-?\d+(\.\d+)?$/.test(numAttempt)) return Number(numAttempt);
-          return txt;
-        })
-      );
-// Judul dan nama item
-const titleRow = ["KARTU STOK"];
-const nameRow = ["NAMA ITEM : " + namaBarang];
-
-// Buat AoA final
-const finalAoA = [];
-finalAoA.push(titleRow);
-finalAoA.push(nameRow);
-finalAoA.push([]);
-finalAoA.push(header);
-bodyData.forEach(r => finalAoA.push(r));
-
-const wb = XLSX.utils.book_new();
-const ws = XLSX.utils.aoa_to_sheet(finalAoA);
-
-// Merge judul & nama item
-const colCount = header.length;
-ws['!merges'] = [
-  { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } }, // Judul
-  { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } }  // Nama item
-];
-
-// ====================================================================
-//   LEBAR KOLOM
-// ====================================================================
-const nameText = "NAMA ITEM : " + namaBarang;
-const needWidth = Math.max(50, nameText.length + 5); // kecilkan agar muat 1 baris
-let cols = new Array(colCount).fill(15);
-cols[0] = needWidth; // kolom pertama lebar
-for (let c = 1; c < colCount; c++) {
-  let maxLen = 12;
-  for (let r = 3; r < finalAoA.length; r++) {
-    const cell = finalAoA[r]?.[c];
-    if (!cell) continue;
-    const len = String(cell).length;
-    if (len + 2 > maxLen) maxLen = len + 2;
-  }
-  cols[c] = maxLen;
-}
-ws['!cols'] = cols.map(w => ({ wch: Math.min(w, 150) }));
-
-// ====================================================================
-//   BORDER OTOMATIS
-// ====================================================================
-const borderStyle = {
-  top: { style: "thin", color: { rgb: "000000" } },
-  bottom: { style: "thin", color: { rgb: "000000" } },
-  left: { style: "thin", color: { rgb: "000000" } },
-  right: { style: "thin", color: { rgb: "000000" } },
-};
-const range = XLSX.utils.decode_range(ws['!ref']);
-for (let R = 0; R <= range.e.r; R++) {
-  for (let C = 0; C <= range.e.c; C++) {
-    const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-    if (!ws[cellRef]) continue;
-    if (!ws[cellRef].s) ws[cellRef].s = {};
-    ws[cellRef].s.border = borderStyle;
-  }
-}
-
-// ====================================================================
-//   FONT SIZE KHUSUS NAMA ITEM
-// ====================================================================
-const namaItemCell = XLSX.utils.encode_cell({ r: 1, c: 0 });
-if (!ws[namaItemCell].s) ws[namaItemCell].s = {};
-ws[namaItemCell].s.font = { name: "Arial", sz: 10, bold: false }; // kecilkan font
-
-// ====================================================================
-//   WRITE FILE
-// ====================================================================
-XLSX.utils.book_append_sheet(wb, ws, "Kartu Stok");
-const safeName = namaBarang.replace(/[\\\/:*?"<>|]/g, "_").replace(/\s+/g, "_");
-XLSX.writeFile(wb, `KARTU_STOK_${safeName}.xlsx`);
-
-
-    } catch (err) {
-      console.error("Export error:", err);
-      alert("Export gagal — cek console (F12).");
+function exportFunc() {
+  try {
+    const modalTable = document.querySelector("#modalKartuStok table");
+    if (!modalTable) {
+      alert("Buka modal kartu stok terlebih dahulu.");
+      return;
     }
+
+    const judulEl = document.getElementById("judulKartuStok");
+    const fullJudul = judulEl ? judulEl.innerText.trim() : "Kartu Stok";
+    const namaBarang =
+      fullJudul.replace(/kartu stok\s*-\s*/i, "").trim() || "ITEM";
+
+    const thead = modalTable.querySelector("thead");
+    const tbody = modalTable.querySelector("tbody");
+    if (!tbody) {
+      alert("Tabel kosong.");
+      return;
+    }
+
+    const header = Array.from(thead.querySelectorAll("th")).map(th =>
+      th.innerText.trim()
+    );
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    let totalMasuk = 0;
+    let totalKeluar = 0;
+
+    const bodyData = rows.map(tr => {
+      const tds = Array.from(tr.querySelectorAll("td"));
+
+      const masuk = Number(
+        (tds[2]?.innerText || "0").replace(/\./g, "").replace(/,/g, ".")
+      );
+      const keluar = Number(
+        (tds[3]?.innerText || "0").replace(/\./g, "").replace(/,/g, ".")
+      );
+
+      totalMasuk += masuk;
+      totalKeluar += keluar;
+
+      return tds.map(td => {
+        const txt = td.innerText.trim();
+        const num = txt.replace(/\./g, "").replace(/,/g, ".");
+        return /^-?\d+(\.\d+)?$/.test(num) ? Number(num) : txt;
+      });
+    });
+
+    // ===============================
+    //  BUILD EXCEL DATA
+    // ===============================
+    const aoa = [];
+    aoa.push(["KARTU STOK"]);
+    aoa.push(["NAMA ITEM : " + namaBarang]);
+    aoa.push([]);
+    aoa.push(header);
+
+    bodyData.forEach(r => aoa.push(r));
+
+    // ---- BARIS TOTAL ----
+    aoa.push([]);
+    aoa.push([
+      "TOTAL",
+      "",
+      totalMasuk,
+      totalKeluar,
+      "",
+      ""
+    ]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Merge judul
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: header.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: header.length - 1 } }
+    ];
+
+    // Lebar kolom (AMAN, TANPA STYLE)
+    ws["!cols"] = header.map((_, i) => ({
+      wch: i === 0 ? 30 : 18
+    }));
+
+    XLSX.utils.book_append_sheet(wb, ws, "Kartu Stok");
+
+    const safeName = namaBarang.replace(/[\\\/:*?"<>|]/g, "_");
+    XLSX.writeFile(wb, `KARTU_STOK_${safeName}.xlsx`);
+
+  } catch (err) {
+    console.error(err);
+    alert("Export gagal — cek console (F12).");
   }
+}
+
 
   btn.addEventListener("click", exportFunc);
 
@@ -1077,6 +1064,7 @@ XLSX.writeFile(wb, `KARTU_STOK_${safeName}.xlsx`);
 
 </body>
 </html>
+
 
 
 
