@@ -538,11 +538,16 @@ document.getElementById("btnExportExcel").addEventListener("click", ()=>{
 });
 
 // Auto-refresh every 2 detik
-loadBuyerDropdown(); // load dropdown only once
+loadBuyerDropdown();
 loadInventory();
-let autoRefreshInterval = null;
-let isAutoRefreshOn = true;
 
+let autoRefreshInterval = null;
+let isAutoRefreshOn = false;
+
+// WAJIB: ambil tombol dulu
+const btnToggle = document.getElementById("btnToggleRefresh");
+
+// START
 function startAutoRefresh(){
   if(autoRefreshInterval) return;
 
@@ -558,50 +563,60 @@ function startAutoRefresh(){
   }, 2000);
 }
 
+// STOP
 function stopAutoRefresh(){
-  clearInterval(autoRefreshInterval);
-  autoRefreshInterval = null;
+  if(autoRefreshInterval){
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
 }
 
+// INIT dari localStorage
 const savedState = localStorage.getItem("autoRefresh");
 
 if(savedState === "OFF"){
   stopAutoRefresh();
   isAutoRefreshOn = false;
+
   btnToggle.textContent = "Auto Refresh: OFF";
   btnToggle.style.background = "#dc3545";
   btnToggle.style.color = "#fff";
+
 } else {
   startAutoRefresh();
   isAutoRefreshOn = true;
+
   btnToggle.textContent = "Auto Refresh: ON";
   btnToggle.style.background = "#ffc107";
   btnToggle.style.color = "#000";
 }
-// Adjust rows per page on resize
-window.addEventListener("resize", renderInventory);
-const btnToggle = document.getElementById("btnToggleRefresh");
 
+// TOGGLE BUTTON
 btnToggle.addEventListener("click", ()=>{
   if(isAutoRefreshOn){
     stopAutoRefresh();
+    isAutoRefreshOn = false;
+
     btnToggle.textContent = "Auto Refresh: OFF";
     btnToggle.style.background = "#dc3545";
     btnToggle.style.color = "#fff";
-    isAutoRefreshOn = false;
 
     localStorage.setItem("autoRefresh", "OFF");
 
   } else {
     startAutoRefresh();
+    isAutoRefreshOn = true;
+
     btnToggle.textContent = "Auto Refresh: ON";
     btnToggle.style.background = "#ffc107";
     btnToggle.style.color = "#000";
-    isAutoRefreshOn = true;
 
     localStorage.setItem("autoRefresh", "ON");
   }
 });
+
+// Resize
+window.addEventListener("resize", renderInventory);
 </script>
 
 <!-- ======= Stok Opname: Script (paste sebelum </body>) ======= -->
