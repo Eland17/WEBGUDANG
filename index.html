@@ -563,8 +563,21 @@ function stopAutoRefresh(){
   autoRefreshInterval = null;
 }
 
-// langsung aktif saat pertama load
-startAutoRefresh();
+const savedState = localStorage.getItem("autoRefresh");
+
+if(savedState === "OFF"){
+  stopAutoRefresh();
+  isAutoRefreshOn = false;
+  btnToggle.textContent = "Auto Refresh: OFF";
+  btnToggle.style.background = "#dc3545";
+  btnToggle.style.color = "#fff";
+} else {
+  startAutoRefresh();
+  isAutoRefreshOn = true;
+  btnToggle.textContent = "Auto Refresh: ON";
+  btnToggle.style.background = "#ffc107";
+  btnToggle.style.color = "#000";
+}
 // Adjust rows per page on resize
 window.addEventListener("resize", renderInventory);
 const btnToggle = document.getElementById("btnToggleRefresh");
