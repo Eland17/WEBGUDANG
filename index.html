@@ -576,12 +576,17 @@ btnToggle.addEventListener("click", ()=>{
     btnToggle.style.background = "#dc3545";
     btnToggle.style.color = "#fff";
     isAutoRefreshOn = false;
+
+    localStorage.setItem("autoRefresh", "OFF");
+
   } else {
     startAutoRefresh();
     btnToggle.textContent = "Auto Refresh: ON";
     btnToggle.style.background = "#ffc107";
     btnToggle.style.color = "#000";
     isAutoRefreshOn = true;
+
+    localStorage.setItem("autoRefresh", "ON");
   }
 });
 </script>
