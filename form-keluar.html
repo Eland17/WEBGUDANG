@@ -159,7 +159,7 @@ button.btn-back {
 <!-- JUMLAH -->
 <div class="input-container">
 <label>Jumlah</label>
-<input type="text" id="jumlah">
+<input type="text" id="jumlah" autocomplete="off" inputmode="numeric" name="jumlah" data-form-type="other" data-lpignore="true">
 </div>
 
 <!-- KETERANGAN (AUTO COMPLETE) -->
@@ -314,19 +314,37 @@ document.addEventListener("click", e => {
 document.getElementById("formKeluar").addEventListener("submit", async e => {
   e.preventDefault();
 
+  const tanggal = document.getElementById("tanggal").value;
+  const jumlahVal = document.getElementById("jumlah").value;
+
+  // ❌ VALIDASI TANGGAL
+  if (!tanggal) {
+    alert("Tanggal wajib diisi!");
+    document.getElementById("tanggal").focus();
+    return;
+  }
+
+  // ❌ VALIDASI JUMLAH
+  if (!jumlahVal || parseFloat(jumlahVal) <= 0) {
+    alert("Jumlah harus lebih dari 0!");
+    document.getElementById("jumlah").focus();
+    return;
+  }
+
   await db.collection("barangKeluar").add({
     kode_barang: kode.value,
     nama_barang: nama.value,
     hs_code: hs.value || "-",
     kode_buyer: buyer.value,
     satuan: document.getElementById("satuan").value,
-    jumlah: parseFloat(document.getElementById("jumlah").value || 0),
+    jumlah: parseFloat(jumlahVal),
     keterangan: ket.value,
-    tanggal: document.getElementById("tanggal").value,
+    tanggal: tanggal,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   });
 
   alert("Data berhasil disimpan!");
+
   e.target.reset();
 });
 </script>
