@@ -167,6 +167,7 @@ footer { background:#007bff; color:white; text-align:center; padding:10px 0; fle
           <thead>
             <tr>
               <th>Kode Barang</th>
+	      <th>Hs Code</th>
               <th>Kode Buyer</th>
               <th>Nama Barang</th>
               <th>Satuan</th>
@@ -450,13 +451,30 @@ async function loadInventory(){
 
   masukSnap.forEach(doc => {
     const d = doc.data();
-    if(!tempData[d.kode_barang]) tempData[d.kode_barang]={kode_barang:d.kode_barang,kode_buyer:d.kode_buyer||"",nama_barang:d.nama_barang||"",satuan:d.satuan||"",masuk:0,keluar:0,stok:0};
+    if(!tempData[d.kode_barang]) {
+  tempData[d.kode_barang] = {
+    kode_barang: d.kode_barang,
+    hs_code: d.hs_code || "",
+    kode_buyer: d.kode_buyer || "",
+    nama_barang: d.nama_barang || "",
+    satuan: d.satuan || "",
+    masuk: 0,
+    keluar: 0,
+    stok: 0
+  };
+} else {
+  // update supaya HS Code selalu ikut terbaru
+  if (d.hs_code) tempData[d.kode_barang].hs_code = d.hs_code;
+  if (d.kode_buyer) tempData[d.kode_barang].kode_buyer = d.kode_buyer;
+  if (d.nama_barang) tempData[d.kode_barang].nama_barang = d.nama_barang;
+  if (d.satuan) tempData[d.kode_barang].satuan = d.satuan;
+}
     tempData[d.kode_barang].masuk += d.jumlah||0;
   });
 
   keluarSnap.forEach(doc => {
     const d = doc.data();
-    if(!tempData[d.kode_barang]) tempData[d.kode_barang]={kode_barang:d.kode_barang,kode_buyer:d.kode_buyer||"",nama_barang:d.nama_barang||"",satuan:d.satuan||"",masuk:0,keluar:0,stok:0};
+    if(!tempData[d.kode_barang]) tempData[d.kode_barang]={kode_barang:d.kode_barang,hs_code:d.hs_code || "",kode_buyer:d.kode_buyer||"",nama_barang:d.nama_barang||"",satuan:d.satuan||"",masuk:0,keluar:0,stok:0};
     tempData[d.kode_barang].keluar += d.jumlah||0;
   });
 
@@ -496,6 +514,7 @@ function renderInventory(){
 
     tbody.innerHTML += `<tr>
       <td>${d.kode_barang}</td>
+      <td>${d.hs_code || "-"}</td>
       <td>${d.kode_buyer}</td>
       <td class="nama-barang">${d.nama_barang}</td>
       <td>${d.satuan}</td>
@@ -530,8 +549,8 @@ async function loadBuyerDropdown(){
 // Export Excel
 document.getElementById("btnExportExcel").addEventListener("click", ()=>{
   const wb = XLSX.utils.book_new();
-  const ws_data = [["Kode Barang","Kode Buyer","Nama Barang","Satuan","Stok"]];
-  inventoryData.forEach(d=>ws_data.push([d.kode_barang,d.kode_buyer,d.nama_barang,d.satuan,d.stok]));
+  const ws_data = [["Kode Barang","HS Code","Kode Buyer","Nama Barang","Satuan","Stok"]];
+  inventoryData.forEach(d=>ws_data.push([d.kode_barang,d.hs_code || "",d.kode_buyer,d.nama_barang,d.satuan,d.stok]));
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
   XLSX.utils.book_append_sheet(wb, ws, "Inventory");
   XLSX.writeFile(wb, `InventoryGudang.xlsx`);
