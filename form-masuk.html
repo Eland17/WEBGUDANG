@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Barang Masuk</title>
+
 <style>
 * { box-sizing: border-box; }
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #e9f0fb;
@@ -15,16 +17,17 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 1.5rem;
-  min-height: 100vh;
   flex-wrap: wrap;
+  min-height: 100vh;
 }
+
 h2 {
   text-align: center;
   margin-bottom: 1.5rem;
   color: #004085;
   font-size: 1.2rem;
 }
+
 form {
   width: 100%;
   max-width: 600px;
@@ -32,161 +35,149 @@ form {
   padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  position: relative;
 }
-label { font-weight: 600; margin-bottom: 0.4rem; display: block; color: #222; font-size: 0.9rem; }
-.input-container { position: relative; margin-bottom: 1rem; }
 
-input[type="text"], input[type="date"], select {
-  width: 100%; padding: 0.6rem 0.8rem; border: 1.8px solid #a3bffa;
-  border-radius: 6px; font-size: 0.9rem; color: #222;
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
 }
-input:focus, select:focus { border-color: #3b6dfc; outline: none; }
+
+.input-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+input, select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1.8px solid #a3bffa;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+input:focus, select:focus {
+  border-color: #3b6dfc;
+  outline: none;
+}
 
 .suggestion-box {
-  position: absolute; background: #fff; width: 100%; max-height: 150px;
-  overflow-y: auto; z-index: 9999; list-style: none; padding: 0; margin: 0;
-  font-size: 0.8rem; border-radius: 0 0 6px 6px;
+  position: absolute;
+  background: white;
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 9999;
+  margin: 0;
+  padding: 0;
+  border-radius: 0 0 6px 6px;
 }
-.suggestion-box li {
-  padding: 6px 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+.suggestion-box div {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
-.suggestion-box li:hover, .suggestion-box li.active { background-color: #e0e0e0; }
+
+.suggestion-box div:hover {
+  background: #e0e0e0;
+}
 
 .btn-container {
-  text-align: center; margin-top: 1.5rem; display: flex; justify-content: center;
-  gap: 0.5rem; flex-wrap: wrap;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1.5rem;
 }
+
 button {
-  cursor: pointer; border: none; padding: 0.6rem 1.2rem; font-weight: 600;
-  font-size: 0.9rem; border-radius: 7px; color: white; background: #3b6dfc; min-width: 100px;
-}
-button.btn-back { background: #6c757d; }
-button.btn-back:hover { background: #565e64; }
-button:hover { background: #2c51d9; }
-
-.jumlah-container { position: relative; display: flex; align-items: flex-start; gap: 1rem; }
-
-#calculatorPanel {
-  position: absolute; top: -65px; right: -320px; width: 280px;
-  background: #fff; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-  padding: 15px; z-index: 1000; display: none;
-}
-#calculatorPanel h2 { margin-top: 0; text-align: center; color: #333; font-size: 1rem; }
-#calculatorPanel table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-#calculatorPanel th, #calculatorPanel td { border: 1px solid #ccc; padding: 4px; text-align: right; }
-#calculatorPanel input { width: 100%; border: none; text-align: right; padding: 4px; }
-.result { margin-top: 10px; font-size: 14px; padding: 6px; background: #e6f5ea;
-  border: 1px solid #bde5cb; border-radius: 6px; color: #1b5e20; }
-.result span { float: right; font-weight: bold; }
-.close-btn { position: relative; top: 0; right: 0; float: right; margin-bottom: 10px; }
-.close-btn:hover { color: #000; }
-
-/* Tambahan: Perbesar form khusus tampilan desktop */
-@media (min-width: 739px) {
-    form {
-        max-width: 750px;       /* dari 600px → 750px */
-        padding: 2rem;          /* padding sedikit diperbesar */
-        font-size: 1rem;        /* teks sedikit lebih besar */
-    }
-
-    input[type="text"], 
-    input[type="date"], 
-    select {
-        font-size: 1rem;
-        padding: 0.75rem 1rem;
-    }
-
-    h2 {
-        font-size: 1.35rem;
-    }
+  border: none;
+  padding: 0.6rem 1.2rem;
+  background: #3b6dfc;
+  color: white;
+  border-radius: 7px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-
-/* Mobile */
-.btn-calc { display: none; }
-@media (max-width: 738px) {
-  .btn-calc {
-    display: inline-block; background: #17a2b8; border: none; color: white;
-    font-size: 0.75rem; padding: 0.3rem 0.5rem; border-radius: 4px; cursor: pointer;
-    margin-left: 6px; min-width: 30px;
-  }
-  .btn-calc:hover { background: #138496; }
-  body { flex-direction: column; align-items: stretch; padding: 0.6rem; }
-  form { padding: 0.8rem; max-width: 95%; margin: 0 auto; border-radius: 8px; }
-  h2 { font-size: 1rem; margin-bottom: 1rem; }
-  input { font-size: 0.85rem; padding: 0.5rem 0.6rem; }
-  .btn-container { flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
-  button { width: 100%; font-size: 0.85rem; padding: 0.5rem; }
-  #calculatorPanel { position: static; width: 100%; margin-top: 1rem; right: auto; }
-  .jumlah-container { flex-direction: column; }
+button.btn-back {
+  background: #6c757d;
 }
 </style>
 </head>
+
 <body>
 
-<form id="formMasuk" autocomplete="off">
-  <h2>Barang Masuk</h2>
+<form id="formMasuk">
 
-  <div class="input-container">
-    <label for="kode_barang">Kode Barang</label>
-    <input type="text" id="kode_barang" name="kode_barang" required autocomplete="off" />
-    <ul id="suggestionsKode" class="suggestion-box"></ul>
-  </div>
+<h2>Barang Masuk</h2>
 
-  <div class="input-container">
-    <label for="nama_barang">Nama Barang</label>
-    <input type="text" id="nama_barang" name="nama_barang" required autocomplete="off" />
-    <ul id="suggestionsNama" class="suggestion-box"></ul>
-  </div>
+<!-- KODE BARANG -->
+<div class="input-container">
+<label>Kode Barang</label>
+<input type="text" id="kode_barang" autocomplete="off">
+<div class="suggestion-box" id="sKode"></div>
+</div>
 
-  <div class="input-container">
-    <label for="kode_buyer">Kode Buyer</label>
-    <input type="text" id="kode_buyer" name="kode_buyer" required autocomplete="off" />
-    <ul id="suggestionsBuyer" class="suggestion-box"></ul>
-  </div>
+<!-- HS CODE -->
+<div class="input-container">
+<label>HS Code</label>
+<input type="text" id="hs_code">
+</div>
 
-  <div class="input-container">
-    <label for="satuan">Satuan</label>
-    <select id="satuan" name="satuan" required>
-      <option value="">-- Pilih Satuan --</option>
-      <option value="PCS">PCS</option>
-      <option value="CONES">CONES</option>
-      <option value="ROLL">ROLL</option>
-      <option value="METER">METER</option>
-      <option value="YARD">YARD</option>
-      <option value="KG">KG</option>
-    </select>
-  </div>
+<!-- NAMA BARANG -->
+<div class="input-container">
+<label>Nama Barang</label>
+<input type="text" id="nama_barang" autocomplete="off">
+<div class="suggestion-box" id="sNama"></div>
+</div>
 
-  <div class="jumlah-container">
-    <div style="flex:1; display:flex; flex-direction: column;">
-      <label for="jumlah">Jumlah</label>
-      <div style="display:flex; align-items:center; gap:5px;">
-        <input type="text" id="jumlah" name="jumlah" required style="flex:4;" />
-        <button type="button" class="btn-calc" id="toggleCalc" style="flex:1; max-width:50px;">Calc</button>
-      </div>
-    </div>
+<!-- BUYER -->
+<div class="input-container">
+<label>Kode Buyer</label>
+<input type="text" id="kode_buyer" autocomplete="off">
+<div class="suggestion-box" id="sBuyer"></div>
+</div>
 
-    <div id="calculatorPanel">
-      <button type="button" class="close-btn" id="closeCalc">✖</button>
-      <h2>Kalkulator</h2>
-      <table><tbody id="calculatorBody"></tbody></table>
-      <div class="result">COUNT : <span id="jumlahCalc">0</span></div>
-      <div class="result">SUM   : <span id="totalCalc">0</span></div>
-    </div>
-  </div>
+<!-- SATUAN -->
+<div class="input-container">
+<label>Satuan</label>
+<select id="satuan">
+<option value="">Pilih</option>
+<option>PCS</option>
+<option>ROLL</option>
+<option>KG</option>
+<option>METER</option>
+<option>YARD</option>
+<option>SETS</option>
+</select>
+</div>
 
-  <label for="keterangan">Keterangan</label>
-  <input type="text" id="keterangan" name="keterangan" />
+<!-- JUMLAH -->
+<div class="input-container">
+<label>Jumlah</label>
+<input type="text" id="jumlah">
+</div>
 
-  <label for="tanggal">Tanggal Masuk</label>
-  <input type="date" id="tanggal" name="tanggal" required />
+<!-- KETERANGAN -->
+<div class="input-container">
+<label>Keterangan</label>
+<input type="text" id="keterangan" autocomplete="off">
+<div class="suggestion-box" id="sKet"></div>
+</div>
 
-  <div class="btn-container">
-    <button type="submit">Simpan</button>
-    <button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali</button>
-  </div>
+<!-- TANGGAL -->
+<div class="input-container">
+<label>Tanggal</label>
+<input type="date" id="tanggal">
+</div>
+
+<div class="btn-container">
+<button type="submit">Simpan</button>
+<button type="button" class="btn-back" onclick="window.location.href='index.html'">Kembali</button>
+</div>
+
 </form>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -196,178 +187,146 @@ button:hover { background: #2c51d9; }
 const firebaseConfig = {
   apiKey: "AIzaSyACOluEhfPw4JBlBaHyXtf1k3TIJAHikKo",
   authDomain: "inventory-gudang-16dfe.firebaseapp.com",
-  projectId: "inventory-gudang-16dfe",
-  storageBucket: "inventory-gudang-16dfe.appspot.com",
-  messagingSenderId: "663364522026",
-  appId: "1:663364522026:web:f48fb1ba0331695de83353"
+  projectId: "inventory-gudang-16dfe"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ============================
-   Fungsi konversi angka (koma/titik)
-   ============================ */
-function convertToNumber(value) {
-  if (!value) return 0;
-  value = value.toString().trim();
+/* ===== DATA ===== */
+let barangMap = new Map();
+let buyerSet = new Set();
+let ketSet = new Set();
 
-  if (value.includes(",") && value.includes(".")) {
-    if (value.lastIndexOf(",") > value.lastIndexOf(".")) {
-      value = value.replace(/\./g, "").replace(",", ".");
-    } else {
-      value = value.replace(/,/g, "");
-    }
-  }
-  else if (value.includes(",")) {
-    value = value.replace(",", ".");
-  }
+async function loadData() {
+  const snap = await db.collection("barangMasuk").get();
 
-  return parseFloat(value) || 0;
-}
-
-let barangMap = new Map(), buyerSet = new Set();
-async function loadDataFromFirestore() {
-  const masukSnap = await db.collection("barangMasuk").get();
-  const keluarSnap = await db.collection("barangKeluar").get();
-  const semua = [...masukSnap.docs, ...keluarSnap.docs];
-  semua.forEach(doc => {
+  snap.docs.forEach(doc => {
     const d = doc.data();
-    if (d.kode_barang && d.nama_barang) barangMap.set(d.kode_barang, d.nama_barang);
+
+    if (d.kode_barang) {
+      barangMap.set(d.kode_barang, {
+        nama: d.nama_barang || "",
+        hs: d.hs_code || "-"
+      });
+    }
+
     if (d.kode_buyer) buyerSet.add(d.kode_buyer);
+    if (d.keterangan) ketSet.add(d.keterangan);
   });
 }
-loadDataFromFirestore();
+loadData();
 
-/* Auto Suggest */
-const inputKode = document.getElementById("kode_barang"),
-      inputNama = document.getElementById("nama_barang"),
-      inputBuyer = document.getElementById("kode_buyer");
-
-const suggestKode = document.getElementById("suggestionsKode"),
-      suggestNama = document.getElementById("suggestionsNama"),
-      suggestBuyer = document.getElementById("suggestionsBuyer");
-
-function showSuggestions(el, list, data) {
-  const val = el.value.trim().toLowerCase();
-  list.innerHTML = '';
+/* ===== AUTOCOMPLETE ===== */
+function suggest(input, box, data) {
+  const val = input.value.toLowerCase();
+  box.innerHTML = "";
   if (!val) return;
-  [...data].filter(x => x.toLowerCase().includes(val)).slice(0, 10).forEach(item => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    li.onclick = () => { el.value = item; list.innerHTML = ''; };
-    list.appendChild(li);
-  });
+
+  [...data]
+    .filter(x => x.toLowerCase().includes(val))
+    .slice(0, 10)
+    .forEach(item => {
+      const div = document.createElement("div");
+      div.textContent = item;
+      div.onclick = () => {
+        input.value = item;
+        box.innerHTML = "";
+      };
+      box.appendChild(div);
+    });
 }
 
-inputKode.addEventListener("input", () => {
-  const val = inputKode.value.trim().toLowerCase();
-  suggestKode.innerHTML = '';
-  if (!val) return;
-  [...barangMap.entries()].filter(([kode]) => kode.toLowerCase().includes(val)).slice(0, 10)
-  .forEach(([kode, nama]) => {
-    const li = document.createElement("li");
-    li.textContent = kode; li.title = nama;
-    li.onclick = () => { inputKode.value = kode; inputNama.value = nama; suggestKode.innerHTML = ''; };
-    suggestKode.appendChild(li);
-  });
+/* ELEMENT */
+const kode = document.getElementById("kode_barang");
+const nama = document.getElementById("nama_barang");
+const hs = document.getElementById("hs_code");
+const buyer = document.getElementById("kode_buyer");
+const ket = document.getElementById("keterangan");
+
+const sKode = document.getElementById("sKode");
+const sNama = document.getElementById("sNama");
+const sBuyer = document.getElementById("sBuyer");
+const sKet = document.getElementById("sKet");
+
+/* KODE BARANG */
+kode.addEventListener("input", () => {
+  sKode.innerHTML = "";
+  const val = kode.value.toLowerCase();
+
+  [...barangMap.entries()]
+    .filter(([k]) => k.toLowerCase().includes(val))
+    .slice(0,10)
+    .forEach(([k,v]) => {
+      const div = document.createElement("div");
+      div.textContent = k;
+      div.onclick = () => {
+        kode.value = k;
+        nama.value = v.nama;
+        hs.value = v.hs;
+        sKode.innerHTML = "";
+      };
+      sKode.appendChild(div);
+    });
 });
 
-inputNama.addEventListener("input", () => {
-  const val = inputNama.value.trim().toLowerCase();
-  suggestNama.innerHTML = '';
-  if (!val) return;
-  [...barangMap.entries()].filter(([, nama]) => nama.toLowerCase().includes(val)).slice(0, 10)
-  .forEach(([kode, nama]) => {
-    const li = document.createElement("li");
-    li.textContent = nama; li.title = kode;
-    li.onclick = () => { inputNama.value = nama; inputKode.value = kode; suggestNama.innerHTML = ''; };
-    suggestNama.appendChild(li);
-  });
+/* NAMA BARANG */
+nama.addEventListener("input", () => {
+  sNama.innerHTML = "";
+  const val = nama.value.toLowerCase();
+
+  [...barangMap.entries()]
+    .filter(([,v]) => v.nama.toLowerCase().includes(val))
+    .slice(0,10)
+    .forEach(([k,v]) => {
+      const div = document.createElement("div");
+      div.textContent = v.nama;
+      div.onclick = () => {
+        nama.value = v.nama;
+        kode.value = k;
+        hs.value = v.hs;
+        sNama.innerHTML = "";
+      };
+      sNama.appendChild(div);
+    });
 });
 
-inputBuyer.addEventListener("input", () => showSuggestions(inputBuyer, suggestBuyer, buyerSet));
+/* BUYER */
+buyer.addEventListener("input", () => suggest(buyer, sBuyer, buyerSet));
 
+/* KETERANGAN */
+ket.addEventListener("input", () => suggest(ket, sKet, ketSet));
+
+/* CLOSE OUTSIDE */
 document.addEventListener("click", e => {
   if (!e.target.closest(".input-container")) {
-    suggestKode.innerHTML = ''; suggestNama.innerHTML = ''; suggestBuyer.innerHTML = '';
+    sKode.innerHTML = "";
+    sNama.innerHTML = "";
+    sBuyer.innerHTML = "";
+    sKet.innerHTML = "";
   }
 });
 
-/* ---------------------------
-   Kalkulator Panel
-----------------------------*/
-const form = document.getElementById("formMasuk");
-const calculatorPanel = document.getElementById("calculatorPanel");
-const calculatorBody = document.getElementById("calculatorBody");
-const closeCalc = document.getElementById("closeCalc");
-const inputJumlah = document.getElementById("jumlah");
-const toggleCalc = document.getElementById("toggleCalc");
-
-for (let r = 0; r < 5; r++) {
-  const tr = document.createElement("tr");
-  for (let c = 0; c < 4; c++) {
-    const td = document.createElement("td");
-    const input = document.createElement("input");
-    input.type = "text"; input.className = "angka";
-    td.appendChild(input); tr.appendChild(td);
-  }
-  calculatorBody.appendChild(tr);
-}
-
-const inputs = document.querySelectorAll("#calculatorPanel .angka");
-const totalEl = document.getElementById("totalCalc");
-const jumlahEl = document.getElementById("jumlahCalc");
-
-/* Perhitungan kalkulator */
-function hitungOtomatis() {
-  let total = 0, count = 0;
-  inputs.forEach(i => {
-    const v = convertToNumber(i.value);
-    if (!isNaN(v) && v !== 0) {
-      total += v;
-      count++;
-    }
-  });
-  jumlahEl.textContent = count;
-  totalEl.textContent = total.toFixed(2);
-}
-
-calculatorPanel.addEventListener("input", hitungOtomatis);
-
-toggleCalc.addEventListener("click", () => {
-  calculatorPanel.style.display = calculatorPanel.style.display === "none" ? "block" : "none";
-});
-
-closeCalc.addEventListener("click", () => {
-  calculatorPanel.style.display = "none";
-});
-
-inputJumlah.addEventListener("focus", () => {
-  if (window.innerWidth > 768) calculatorPanel.style.display = "block";
-});
-
-/* ---------------------------
-   SUBMIT → SIMPAN FIREBASE
-----------------------------*/
-form.addEventListener("submit", async e => {
+/* SAVE */
+document.getElementById("formMasuk").addEventListener("submit", async e => {
   e.preventDefault();
-  const data = Object.fromEntries(new FormData(form).entries());
 
-  data.jumlah = convertToNumber(data.jumlah);  // FIX KOMA & TITIK
-  data.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+  await db.collection("barangMasuk").add({
+    kode_barang: kode.value,
+    nama_barang: nama.value,
+    hs_code: hs.value || "-",
+    kode_buyer: buyer.value,
+    satuan: document.getElementById("satuan").value,
+    jumlah: parseFloat(document.getElementById("jumlah").value || 0),
+    keterangan: ket.value,
+    tanggal: document.getElementById("tanggal").value,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
 
-  await db.collection("barangMasuk").add(data);
-
-  alert("Data berhasil disimpan.");
-
-  form.reset();
-  inputs.forEach(i => i.value = "");
-  jumlahEl.textContent = "0";
-  totalEl.textContent = "0";
-  calculatorPanel.style.display = "none";
+  alert("Data barang masuk berhasil disimpan!");
+  e.target.reset();
 });
 </script>
 
 </body>
 </html>
-
