@@ -311,41 +311,65 @@ document.addEventListener("click", e => {
 });
 
 /* SAVE */
+let isSaving = false;
+
 document.getElementById("formKeluar").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const tanggal = document.getElementById("tanggal").value;
-  const jumlahVal = document.getElementById("jumlah").value;
+  // 🚫 CEGAH DOUBLE KLIK
+  if (isSaving) return;
+  isSaving = true;
 
-  // ❌ VALIDASI TANGGAL
-  if (!tanggal) {
-    alert("Tanggal wajib diisi!");
-    document.getElementById("tanggal").focus();
-    return;
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Menyimpan...";
+
+  try {
+    const tanggal = document.getElementById("tanggal").value;
+    const jumlahVal = document.getElementById("jumlah").value;
+
+    // VALIDASI
+ if (!tanggal) {
+  alert("Tanggal wajib diisi!");
+  document.getElementById("tanggal").focus();
+  isSaving = false;
+  btn.disabled = false;
+  btn.textContent = "Simpan";
+  return;
+}
+
+if (!jumlahVal || parseFloat(jumlahVal) <= 0) {
+  alert("Jumlah harus lebih dari 0!");
+  document.getElementById("jumlah").focus();
+  isSaving = false;
+  btn.disabled = false;
+  btn.textContent = "Simpan";
+  return;
+}
+
+    await db.collection("barangKeluar").add({
+      kode_barang: kode.value,
+      nama_barang: nama.value,
+      hs_code: hs.value || "-",
+      kode_buyer: buyer.value,
+      satuan: document.getElementById("satuan").value,
+      jumlah: parseFloat(jumlahVal),
+      keterangan: ket.value,
+      tanggal: tanggal,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert("Data berhasil disimpan!");
+    e.target.reset();
+
+  } catch (err) {
+    console.error(err);
+    alert("Gagal menyimpan data!");
+  } finally {
+    isSaving = false;
+    btn.disabled = false;
+    btn.textContent = "Simpan";
   }
-
-  // ❌ VALIDASI JUMLAH
-  if (!jumlahVal || parseFloat(jumlahVal) <= 0) {
-    alert("Jumlah harus lebih dari 0!");
-    document.getElementById("jumlah").focus();
-    return;
-  }
-
-  await db.collection("barangKeluar").add({
-    kode_barang: kode.value,
-    nama_barang: nama.value,
-    hs_code: hs.value || "-",
-    kode_buyer: buyer.value,
-    satuan: document.getElementById("satuan").value,
-    jumlah: parseFloat(jumlahVal),
-    keterangan: ket.value,
-    tanggal: tanggal,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  alert("Data berhasil disimpan!");
-
-  e.target.reset();
 });
 </script>
 
