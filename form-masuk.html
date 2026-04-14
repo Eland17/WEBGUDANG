@@ -146,7 +146,6 @@ button.btn-back {
 <select id="satuan">
 <option value="">Pilih</option>
 <option>PCS</option>
-<option>CONES</option>
 <option>ROLL</option>
 <option>KG</option>
 <option>METER</option>
@@ -309,23 +308,65 @@ document.addEventListener("click", e => {
 });
 
 /* SAVE */
+let isSaving = false;
+
 document.getElementById("formMasuk").addEventListener("submit", async e => {
   e.preventDefault();
 
-  await db.collection("barangMasuk").add({
-    kode_barang: kode.value,
-    nama_barang: nama.value,
-    hs_code: hs.value || "-",
-    kode_buyer: buyer.value,
-    satuan: document.getElementById("satuan").value,
-    jumlah: parseFloat(document.getElementById("jumlah").value || 0),
-    keterangan: ket.value,
-    tanggal: document.getElementById("tanggal").value,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  // 🚫 CEGAH DOUBLE SUBMIT
+  if (isSaving) return;
+  isSaving = true;
 
-  alert("Data barang masuk berhasil disimpan!");
-  e.target.reset();
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Menyimpan...";
+
+  try {
+    const tanggal = document.getElementById("tanggal").value;
+    const jumlahVal = document.getElementById("jumlah").value;
+
+    // VALIDASI
+    if (!tanggal) {
+      alert("Tanggal wajib diisi!");
+      document.getElementById("tanggal").focus();
+      isSaving = false;
+      btn.disabled = false;
+      btn.textContent = "Simpan";
+      return;
+    }
+
+    if (!jumlahVal || parseFloat(jumlahVal) <= 0) {
+      alert("Jumlah harus lebih dari 0!");
+      document.getElementById("jumlah").focus();
+      isSaving = false;
+      btn.disabled = false;
+      btn.textContent = "Simpan";
+      return;
+    }
+
+    await db.collection("barangMasuk").add({
+      kode_barang: kode.value,
+      nama_barang: nama.value,
+      hs_code: hs.value || "-",
+      kode_buyer: buyer.value,
+      satuan: document.getElementById("satuan").value,
+      jumlah: parseFloat(jumlahVal),
+      keterangan: ket.value,
+      tanggal: tanggal,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert("Data barang masuk berhasil disimpan!");
+    e.target.reset();
+
+  } catch (err) {
+    console.error(err);
+    alert("Gagal menyimpan data!");
+  } finally {
+    isSaving = false;
+    btn.disabled = false;
+    btn.textContent = "Simpan";
+  }
 });
 </script>
 
