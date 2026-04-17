@@ -62,7 +62,6 @@ input:focus, select:focus {
   outline: none;
 }
 
-/* AUTOCOMPLETE BOX (tanpa bullet tampil seperti list) */
 .suggestion-box {
   position: absolute;
   background: white;
@@ -114,34 +113,29 @@ button.btn-back {
 
 <h2>Barang Keluar</h2>
 
-<!-- KODE BARANG -->
 <div class="input-container">
 <label>Kode Barang</label>
 <input type="text" id="kode_barang" autocomplete="off">
 <div class="suggestion-box" id="sKode"></div>
 </div>
 
-<!-- HS CODE -->
 <div class="input-container">
 <label>HS Code</label>
 <input type="text" id="hs_code">
 </div>
 
-<!-- NAMA BARANG -->
 <div class="input-container">
 <label>Nama Barang</label>
 <input type="text" id="nama_barang" autocomplete="off">
 <div class="suggestion-box" id="sNama"></div>
 </div>
 
-<!-- BUYER -->
 <div class="input-container">
 <label>Kode Buyer</label>
 <input type="text" id="kode_buyer" autocomplete="off">
 <div class="suggestion-box" id="sBuyer"></div>
 </div>
 
-<!-- SATUAN -->
 <div class="input-container">
 <label>Satuan</label>
 <select id="satuan">
@@ -156,20 +150,17 @@ button.btn-back {
 </select>
 </div>
 
-<!-- JUMLAH -->
 <div class="input-container">
 <label>Jumlah</label>
-<input type="text" id="jumlah" autocomplete="off" inputmode="numeric" name="jumlah" data-form-type="other" data-lpignore="true">
+<input type="text" id="jumlah" autocomplete="off" inputmode="numeric">
 </div>
 
-<!-- KETERANGAN (AUTO COMPLETE) -->
 <div class="input-container">
 <label>Keterangan</label>
 <input type="text" id="keterangan" autocomplete="off">
 <div class="suggestion-box" id="sKet"></div>
 </div>
 
-<!-- TANGGAL -->
 <div class="input-container">
 <label>Tanggal</label>
 <input type="date" id="tanggal">
@@ -220,7 +211,7 @@ async function loadData() {
 }
 loadData();
 
-/* ===== AUTO COMPLETE SIMPLE ===== */
+/* ===== AUTO COMPLETE ===== */
 function suggest(input, box, data) {
   const val = input.value.toLowerCase();
   box.innerHTML = "";
@@ -228,7 +219,7 @@ function suggest(input, box, data) {
 
   [...data]
     .filter(x => x.toLowerCase().includes(val))
-    .slice(0, 10)
+    .slice(0,10)
     .forEach(item => {
       const div = document.createElement("div");
       div.textContent = item;
@@ -294,13 +285,9 @@ nama.addEventListener("input", () => {
     });
 });
 
-/* BUYER */
 buyer.addEventListener("input", () => suggest(buyer, sBuyer, buyerSet));
-
-/* KETERANGAN AUTO COMPLETE */
 ket.addEventListener("input", () => suggest(ket, sKet, ketSet));
 
-/* CLOSE CLICK OUTSIDE */
 document.addEventListener("click", e => {
   if (!e.target.closest(".input-container")) {
     sKode.innerHTML = "";
@@ -310,13 +297,12 @@ document.addEventListener("click", e => {
   }
 });
 
-/* SAVE */
+/* ===== SAVE ===== */
 let isSaving = false;
 
 document.getElementById("formKeluar").addEventListener("submit", async e => {
   e.preventDefault();
 
-  // 🚫 CEGAH DOUBLE KLIK
   if (isSaving) return;
   isSaving = true;
 
@@ -326,34 +312,53 @@ document.getElementById("formKeluar").addEventListener("submit", async e => {
 
   try {
     const tanggal = document.getElementById("tanggal").value;
-    const jumlahVal = document.getElementById("jumlah").value;
+    const jumlahVal = parseFloat(document.getElementById("jumlah").value);
 
-    // VALIDASI
- if (!tanggal) {
-  alert("Tanggal wajib diisi!");
-  document.getElementById("tanggal").focus();
-  isSaving = false;
-  btn.disabled = false;
-  btn.textContent = "Simpan";
-  return;
-}
+    if (!tanggal) {
+      alert("Tanggal wajib diisi!");
+      return;
+    }
 
-if (!jumlahVal || parseFloat(jumlahVal) <= 0) {
-  alert("Jumlah harus lebih dari 0!");
-  document.getElementById("jumlah").focus();
-  isSaving = false;
-  btn.disabled = false;
-  btn.textContent = "Simpan";
-  return;
-}
+    if (!jumlahVal || jumlahVal <= 0) {
+      alert("Jumlah harus lebih dari 0!");
+      return;
+    }
 
+    /* ===== CEK STOK AGAR TIDAK MINUS ===== */
+    let totalMasuk = 0;
+    let totalKeluar = 0;
+
+    const masukSnap = await db.collection("barangMasuk")
+      .where("kode_barang", "==", kode.value)
+      .get();
+
+    masukSnap.forEach(doc => {
+      totalMasuk += Number(doc.data().jumlah || 0);
+    });
+
+    const keluarSnap = await db.collection("barangKeluar")
+      .where("kode_barang", "==", kode.value)
+      .get();
+
+    keluarSnap.forEach(doc => {
+      totalKeluar += Number(doc.data().jumlah || 0);
+    });
+
+    const stok = totalMasuk - totalKeluar;
+
+    if (jumlahVal > stok) {
+      alert("Stok tidak cukup! Sisa stok: " + stok);
+      return;
+    }
+
+    /* ===== SIMPAN ===== */
     await db.collection("barangKeluar").add({
       kode_barang: kode.value,
       nama_barang: nama.value,
       hs_code: hs.value || "-",
       kode_buyer: buyer.value,
       satuan: document.getElementById("satuan").value,
-      jumlah: parseFloat(jumlahVal),
+      jumlah: jumlahVal,
       keterangan: ket.value,
       tanggal: tanggal,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -362,7 +367,7 @@ if (!jumlahVal || parseFloat(jumlahVal) <= 0) {
     alert("Data berhasil disimpan!");
     e.target.reset();
 
-  } catch (err) {
+  } catch(err) {
     console.error(err);
     alert("Gagal menyimpan data!");
   } finally {
