@@ -158,7 +158,7 @@ button.btn-back {
 <!-- JUMLAH -->
 <div class="input-container">
 <label>Jumlah</label>
-<input type="number" id="jumlah" autocomplete="off" inputmode="numeric">
+<input type="text" id="jumlah" autocomplete="off" inputmode="decimal" placeholder=>
 </div>
 
 <!-- KETERANGAN -->
@@ -324,7 +324,7 @@ document.getElementById("formMasuk").addEventListener("submit", async e => {
 
   try {
     const tanggal = document.getElementById("tanggal").value;
-    const jumlahVal = document.getElementById("jumlah").value;
+    const jumlahVal = document.getElementById("jumlah").value.replace(",", ".");
 
     // VALIDASI
     if (!tanggal) {
